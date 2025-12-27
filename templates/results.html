@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ניהול חלוקה</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f4f7f6; font-family: system-ui; }
+        .step-card { background: white; border-radius: 15px; margin-bottom: 12px; padding: 20px; transition: 0.3s; border-right: 8px solid #007bff; }
+        .completed { background-color: #d4edda !important; border-right-color: #28a745 !important; opacity: 0.7; }
+        .completed h5 { text-decoration: line-through; color: #155724; }
+        .btn-check-task { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container py-4">
+        <h2 class="text-center fw-bold mb-4">📦 ניהול קו חלוקה</h2>
+        <div class="alert alert-dark text-center shadow-sm">מרחק כולל: {{ distance }} ק"מ</div>
+        
+        <div id="route-list">
+        {% for stop in route %}
+        <div class="step-card shadow-sm" id="step-{{ loop.index }}">
+            <div class="d-flex justify-content-between align-items-start">
+                <h5 class="mb-3">תחנה {{ loop.index }}: {{ stop.address }}</h5>
+                <input type="checkbox" class="btn-check" id="btn-check-{{ loop.index }}" autocomplete="off" onchange="toggleComplete({{ loop.index }})">
+                <label class="btn btn-outline-success btn-sm" for="btn-check-{{ loop.index }}">✓ בוצע</label>
+            </div>
+            
+            <div class="d-flex gap-2 mt-2">
+                <a href="https://waze.com/ul?q={{ stop.address }}&navigate=yes" class="btn btn-success flex-fill">Waze</a>
+                <a href="http://googleusercontent.com/maps.google.com/2{{ stop.address }}" target="_blank" class="btn btn-primary flex-fill">Google</a>
+            </div>
+        </div>
+        {% endfor %}
+        </div>
+
+        <a href="/" class="btn btn-outline-secondary w-100 mt-4 p-3">🔄 מסלול חדש</a>
+    </div>
+
+    <script>
+        function toggleComplete(id) {
+            const card = document.getElementById('step-' + id);
+            if (document.getElementById('btn-check-' + id).checked) {
+                card.classList.add('completed');
+            } else {
+                card.classList.remove('completed');
+            }
+        }
+    </script>
+</body>
+</html>
