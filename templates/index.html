@@ -8,53 +8,56 @@
     <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
         :root { --brand: #1a1a1a; --accent: #d4a373; --bg: #fdfbf7; --success: #28a745; }
-        body { font-family: 'Assistant', sans-serif; background: var(--bg); margin: 0; padding: 15px; color: #333; }
+        body { font-family: 'Assistant', sans-serif; background: var(--bg); margin: 0; padding: 15px; color: #333; direction: rtl; }
         .container { max-width: 600px; margin: 0 auto; }
         
-        /* עיצוב כרטיסיות */
         .glass-card { background: white; border-radius: 15px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 15px; }
         
-        .input-row { display: grid; grid-template-columns: 2fr 1.2fr auto; gap: 8px; margin-bottom: 10px; }
-        input { padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.9rem; }
-        
-        #map { height: 280px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #eee; }
+        .input-row { display: flex; gap: 8px; margin-bottom: 10px; }
+        input, textarea { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 1rem; font-family: inherit; }
+        textarea { width: 100%; height: 80px; resize: none; margin-bottom: 10px; border-color: var(--accent); }
 
-        /* כפתורים */
-        button { border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        .btn-main { background: var(--brand); color: white; padding: 12px; width: 100%; margin-top: 5px; }
-        .btn-opt { background: var(--accent); color: white; width: 100%; padding: 12px; margin-top: 5px; }
+        #map { height: 250px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #eee; z-index: 1; }
 
-        /* רשימת משלוחים */
+        button { border: none; border-radius: 10px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-add { background: var(--brand); color: white; padding: 0 20px; font-size: 1.5rem; }
+        .btn-opt { background: var(--accent); color: white; width: 100%; padding: 15px; font-size: 1.1rem; margin-bottom: 8px; }
+        .btn-import { background: #25d366; color: white; width: 100%; padding: 10px; margin-bottom: 10px; }
+
         .route-item { 
             background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px;
             border-right: 5px solid var(--accent); display: flex; flex-direction: column; gap: 10px;
-            transition: 0.3s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05); text-align: right;
         }
         .route-item.completed { opacity: 0.5; filter: grayscale(1); border-right-color: #ccc; }
         
         .item-header { display: flex; justify-content: space-between; align-items: flex-start; }
-        .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-start; }
         
-        /* כפתורי פעולה קטנים */
         .action-btn { 
-            padding: 8px 12px; border-radius: 6px; font-size: 0.8rem; text-decoration: none; 
-            color: white; display: flex; align-items: center; gap: 5px;
+            padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; text-decoration: none; 
+            color: white; font-weight: bold; display: flex; align-items: center; gap: 4px;
         }
         .waze { background: #33ccff; }
         .gmaps { background: #4285f4; }
         .call { background: #28a745; }
         .camera { background: #6c757d; }
-        .v-check { background: white; border: 2px solid var(--success); color: var(--success); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+
+        .v-check { 
+            width: 35px; height: 35px; border: 2px solid var(--success); 
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 1.2rem; color: var(--success); flex-shrink: 0;
+        }
         .completed .v-check { background: var(--success); color: white; }
 
-        .stats { display: flex; justify-content: space-around; background: var(--brand); color: white; padding: 10px; border-radius: 10px; margin-bottom: 15px; font-size: 0.85rem; }
+        .stats { display: flex; justify-content: space-around; background: var(--brand); color: white; padding: 12px; border-radius: 12px; margin-bottom: 15px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <header style="text-align: center; margin-bottom: 15px;">
-        <h2 style="margin:0;">DELIVERY PRO</h2>
+        <h2 style="margin:0; letter-spacing: 1px;">DELIVERY PRO</h2>
     </header>
 
     <div class="stats" id="statsBar" style="display:none;">
@@ -63,51 +66,86 @@
     </div>
 
     <div class="glass-card">
+        <p style="margin: 0 0 10px 0; font-size: 0.9rem; font-weight: bold;">ייבוא מהיר (הדבק הודעה):</p>
+        <textarea id="bulkImport" placeholder="הדבק כאן רשימת כתובות מהודעה... (כתובת בכל שורה)"></textarea>
+        <button class="btn-import" onclick="importFromText()">ייבא כתובות מהטקסט ✨</button>
+        
+        <hr style="opacity: 0.2; margin: 15px 0;">
+        
+        <p style="margin: 0 0 10px 0; font-size: 0.9rem; font-weight: bold;">הוספה ידנית:</p>
         <div class="input-row">
-            <input type="text" id="addressInput" placeholder="כתובת">
-            <input type="tel" id="phoneInput" placeholder="טלפון">
-            <button class="btn-main" onclick="addLocation()" style="margin:0; width:45px;">+</button>
+            <input type="text" id="addressInput" placeholder="כתובת (עיר, רחוב)">
+            <button class="btn-add" onclick="addLocation()">+</button>
         </div>
+        <input type="tel" id="phoneInput" placeholder="מספר טלפון ללקוח" style="margin-bottom: 10px;">
+        
         <div id="map"></div>
         <button class="btn-opt" onclick="optimizeRoute()">סדר מסלול אופטימלי 🚀</button>
     </div>
 
     <div id="addressList"></div>
     
-    <button onclick="clearAll()" style="background:none; color:red; font-size:0.8rem; width:100%; padding:20px;">איפוס כל הנתונים</button>
+    <center>
+        <button onclick="clearAll()" style="background:none; color:red; margin-top: 20px; font-size: 0.8rem;">איפוס כל הנתונים</button>
+    </center>
 </div>
 
 <audio id="pingSound" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3"></audio>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    let map = L.map('map', { zoomControl: false }).setView([32.0853, 34.7818], 10);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map); // מפה נקייה יותר
+    var map = L.map('map').setView([32.0853, 34.7818], 10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
     
-    let locations = JSON.parse(localStorage.getItem('delivery_v3')) || [];
-    let markers = [];
+    var locations = JSON.parse(localStorage.getItem('delivery_v5')) || [];
+    var markers = [];
 
-    function save() { localStorage.setItem('delivery_v3', JSON.stringify(locations)); }
+    function save() { localStorage.setItem('delivery_v5', JSON.stringify(locations)); }
+
+    async function importFromText() {
+        const text = document.getElementById('bulkImport').value;
+        const lines = text.split('\n').filter(line => line.trim().length > 3);
+        
+        if(lines.length === 0) return alert("לא נמצאו כתובות בטקסט");
+        
+        alert(`מתחיל לייבא ${lines.length} כתובות. זה עשוי לקחת כמה שניות...`);
+        
+        for (let line of lines) {
+            await addLocationByText(line.trim());
+        }
+        document.getElementById('bulkImport').value = '';
+        updateUI();
+    }
+
+    async function addLocationByText(addr) {
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}`);
+            const data = await res.json();
+            if (data.length > 0) {
+                locations.push({
+                    name: addr,
+                    phone: '',
+                    lat: parseFloat(data[0].lat),
+                    lng: parseFloat(data[0].lon),
+                    completed: false
+                });
+                save();
+            }
+        } catch (e) {}
+    }
 
     async function addLocation() {
         const addr = document.getElementById('addressInput').value;
         const phone = document.getElementById('phoneInput').value;
-        if(!addr) return;
+        if(!addr) return alert("נא להזין כתובת");
 
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${addr}`);
-        const data = await res.json();
-        if (data.length > 0) {
-            locations.push({ 
-                name: addr, 
-                phone: phone, 
-                lat: parseFloat(data[0].lat), 
-                lng: parseFloat(data[0].lon), 
-                completed: false 
-            });
-            document.getElementById('addressInput').value = '';
-            document.getElementById('phoneInput').value = '';
-            save(); updateUI();
-        }
+        await addLocationByText(addr);
+        const last = locations[locations.length-1];
+        if(last) last.phone = phone;
+        
+        document.getElementById('addressInput').value = '';
+        document.getElementById('phoneInput').value = '';
+        save(); updateUI();
     }
 
     function updateUI() {
@@ -119,7 +157,6 @@
 
         locations.forEach((loc, i) => {
             if (i > 0) totalM += getDistance(locations[i-1], loc) * 1.3;
-
             const item = document.createElement('div');
             item.className = `route-item ${loc.completed ? 'completed' : ''}`;
             item.innerHTML = `
@@ -131,17 +168,17 @@
                     <div class="v-check" onclick="toggleComplete(${i})">${loc.completed ? '✓' : ''}</div>
                 </div>
                 <div class="actions">
-                    <a href="https://waze.com/ul?ll=${loc.lat},${loc.lng}&navigate=yes" class="action-btn waze">Waze</a>
-                    <a href="https://www.google.com/maps/search/?api=1&query=$${loc.lat},${loc.lng}" class="action-btn gmaps">Maps</a>
+                    <a href="https://waze.com/ul?ll=${loc.lat},${loc.lng}&navigate=yes" target="_blank" class="action-btn waze">Waze</a>
+                    <a href="https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}" target="_blank" class="action-btn gmaps">Google Maps</a>
                     ${loc.phone ? `<a href="tel:${loc.phone}" class="action-btn call">📞 חיוג</a>` : ''}
                     <button class="action-btn camera" onclick="openCamera()">📷 צילום</button>
                 </div>
             `;
             list.appendChild(item);
-            markers.push(L.circleMarker([loc.lat, loc.lng], { radius: 8, color: var(--accent) }).addTo(map));
+            markers.push(L.marker([loc.lat, loc.lng]).addTo(map));
         });
 
-        if(locations.length > 1) {
+        if(locations.length > 0) {
             document.getElementById('statsBar').style.display = 'flex';
             document.getElementById('totalDist').innerText = (totalM/1000).toFixed(1) + " ק\"מ";
             document.getElementById('totalTime').innerText = Math.round(totalM/500 + locations.length*5) + " דק'";
@@ -151,15 +188,14 @@
 
     function toggleComplete(i) {
         locations[i].completed = !locations[i].completed;
-        if(locations[i].completed) document.getElementById('pingSound').play();
+        if(locations[i].completed) document.getElementById('pingSound').play().catch(() => {});
         save(); updateUI();
     }
 
     function openCamera() {
         const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/*';
-        input.capture = 'environment';
+        input.type = 'file'; input.accept = 'image/*'; input.capture = 'environment';
+        input.onchange = () => alert("התמונה נקלטה בהצלחה!");
         input.click();
     }
 
@@ -178,11 +214,12 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ locations })
         });
-        locations = (await res.json()).map(l => ({...l, completed: false}));
+        const sorted = await res.json();
+        locations = sorted.map(l => ({...l, completed: false}));
         save(); updateUI();
     }
 
-    function clearAll() { if(confirm("למחוק הכל?")) { locations = []; save(); updateUI(); } }
+    function clearAll() { if(confirm("למחוק הכל?")) { locations = []; save(); updateUI(); location.reload(); } }
 
     updateUI();
 </script>
