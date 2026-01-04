@@ -3,162 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>מערכת לוגיסטיקה - חנות אונליין</title>
+    <title>Delivery Pro | מערכת הפצה חכמה</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --brand-color: #1a1a1a;
-            --accent-color: #d4a373;
-            --bg-site: #fdfbf7;
-            --text-dark: #2d2d2d;
+        :root { --brand: #1a1a1a; --accent: #d4a373; --bg: #fdfbf7; --success: #28a745; }
+        body { font-family: 'Assistant', sans-serif; background: var(--bg); margin: 0; padding: 15px; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; }
+        
+        /* עיצוב כרטיסיות */
+        .glass-card { background: white; border-radius: 15px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 15px; }
+        
+        .input-row { display: grid; grid-template-columns: 2fr 1.2fr auto; gap: 8px; margin-bottom: 10px; }
+        input { padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.9rem; }
+        
+        #map { height: 280px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #eee; }
+
+        /* כפתורים */
+        button { border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-main { background: var(--brand); color: white; padding: 12px; width: 100%; margin-top: 5px; }
+        .btn-opt { background: var(--accent); color: white; width: 100%; padding: 12px; margin-top: 5px; }
+
+        /* רשימת משלוחים */
+        .route-item { 
+            background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px;
+            border-right: 5px solid var(--accent); display: flex; flex-direction: column; gap: 10px;
+            transition: 0.3s;
         }
-
-        body {
-            font-family: 'Assistant', sans-serif;
-            background-color: var(--bg-site);
-            color: var(--text-dark);
-            margin: 0; padding: 15px;
-            display: flex; flex-direction: column; align-items: center;
-        }
-
-        .container { max-width: 600px; width: 100%; }
-
-        header { 
-            text-align: center; border-bottom: 2px solid var(--brand-color); 
-            padding-bottom: 10px; margin-bottom: 20px;
-        }
-
-        .stats-bar {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
-            margin-bottom: 15px; text-align: center;
-        }
-
-        .stat-card {
-            background: white; padding: 10px; border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1px solid #eee;
-        }
-
-        .stat-card b { font-size: 1.1rem; color: var(--accent-color); display: block; }
-
-        .glass-card {
-            background: white; border-radius: 20px; padding: 20px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 20px;
-        }
-
-        .input-group { display: flex; gap: 8px; margin-bottom: 15px; }
-        input {
-            flex: 1; padding: 12px; border-radius: 10px;
-            border: 1px solid #ddd; outline: none;
-        }
-
-        button {
-            padding: 12px 20px; border-radius: 10px; border: none;
-            font-weight: 700; cursor: pointer; transition: 0.2s;
-        }
-
-        .btn-add { background: var(--brand-color); color: white; }
-        .btn-optimize { 
-            background: var(--accent-color); color: white; width: 100%; 
-            margin-top: 10px; font-size: 1rem;
-        }
-        .btn-share { background: #25d366; color: white; width: 100%; margin-top: 10px; }
-        .btn-clear { background: #ff4d4d; color: white; margin-top: 20px; font-size: 0.8rem; opacity: 0.8; }
-
-        #map { height: 250px; border-radius: 15px; margin-bottom: 15px; border: 1px solid #eee; }
-
-        .route-item {
-            background: white; margin-bottom: 10px; padding: 15px;
-            border-radius: 12px; display: flex; justify-content: space-between;
-            align-items: center; border-right: 4px solid var(--accent-color);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.03);
-        }
-
-        .route-item.completed { opacity: 0.4; filter: grayscale(1); border-right-color: #ccc; }
-
-        .nav-btn {
-            text-decoration: none; font-size: 0.75rem; padding: 8px 15px;
-            border-radius: 8px; color: white; font-weight: bold; margin-left: 5px;
+        .route-item.completed { opacity: 0.5; filter: grayscale(1); border-right-color: #ccc; }
+        
+        .item-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        
+        /* כפתורי פעולה קטנים */
+        .action-btn { 
+            padding: 8px 12px; border-radius: 6px; font-size: 0.8rem; text-decoration: none; 
+            color: white; display: flex; align-items: center; gap: 5px;
         }
         .waze { background: #33ccff; }
-        .check-box { 
-            width: 24px; height: 24px; border: 2px solid var(--accent-color); 
-            border-radius: 5px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-        }
-        .completed .check-box { background: var(--accent-color); color: white; }
+        .gmaps { background: #4285f4; }
+        .call { background: #28a745; }
+        .camera { background: #6c757d; }
+        .v-check { background: white; border: 2px solid var(--success); color: var(--success); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .completed .v-check { background: var(--success); color: white; }
 
-        .eta-label { font-size: 0.75rem; color: #888; margin-top: 4px; }
+        .stats { display: flex; justify-content: space-around; background: var(--brand); color: white; padding: 10px; border-radius: 10px; margin-bottom: 15px; font-size: 0.85rem; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <header>
-        <h2 style="margin:0;">DELIVERY PORTAL</h2>
-        <p style="margin:5px 0; font-size: 0.8rem;">ניהול משלוחי החנות</p>
+    <header style="text-align: center; margin-bottom: 15px;">
+        <h2 style="margin:0;">DELIVERY PRO</h2>
     </header>
 
-    <div class="stats-bar" id="statsBar" style="display: none;">
-        <div class="stat-card"><span>זמן חלוקה משוער</span><b id="totalTime">0</b></div>
-        <div class="stat-card"><span>מרחק כולל</span><b id="totalDist">0</b></div>
+    <div class="stats" id="statsBar" style="display:none;">
+        <div>מרחק: <b id="totalDist">0</b></div>
+        <div>זמן חלוקה: <b id="totalTime">0</b></div>
     </div>
 
     <div class="glass-card">
-        <div class="input-group">
-            <input type="text" id="addressInput" placeholder="הוסף כתובת...">
-            <button class="btn-add" onclick="addLocation()">הוסף</button>
+        <div class="input-row">
+            <input type="text" id="addressInput" placeholder="כתובת">
+            <input type="tel" id="phoneInput" placeholder="טלפון">
+            <button class="btn-main" onclick="addLocation()" style="margin:0; width:45px;">+</button>
         </div>
         <div id="map"></div>
-        <button class="btn-optimize" onclick="optimizeRoute()">ג'נרט מסלול חלוקה אופטימלי</button>
-        <button class="btn-share" onclick="shareToWhatsApp()">שתף מסלול בוואטסאפ 📱</button>
+        <button class="btn-opt" onclick="optimizeRoute()">סדר מסלול אופטימלי 🚀</button>
     </div>
 
     <div id="addressList"></div>
     
-    <center>
-        <button class="btn-clear" onclick="clearData()">ניקוי חלוקה ואיפוס נתונים</button>
-    </center>
+    <button onclick="clearAll()" style="background:none; color:red; font-size:0.8rem; width:100%; padding:20px;">איפוס כל הנתונים</button>
 </div>
+
+<audio id="pingSound" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3"></audio>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    let map = L.map('map').setView([32.0853, 34.7818], 10);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    let map = L.map('map', { zoomControl: false }).setView([32.0853, 34.7818], 10);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map); // מפה נקייה יותר
     
-    // טעינה ראשונית מהזיכרון של הדפדפן
-    let locations = JSON.parse(localStorage.getItem('delivery_data')) || [];
+    let locations = JSON.parse(localStorage.getItem('delivery_v3')) || [];
     let markers = [];
 
-    function saveToLocal() {
-        localStorage.setItem('delivery_data', JSON.stringify(locations));
-    }
-
-    function clearData() {
-        if(confirm("למחוק את כל נתוני החלוקה?")) {
-            locations = [];
-            saveToLocal();
-            updateUI();
-        }
-    }
-
-    function getDist(p1, p2) {
-        const R = 6371e3;
-        const dLat = (p2.lat-p1.lat) * Math.PI/180;
-        const dLon = (p2.lng-p1.lng) * Math.PI/180;
-        const a = Math.sin(dLat/2)**2 + Math.cos(p1.lat*Math.PI/180) * Math.cos(p2.lat*Math.PI/180) * Math.sin(dLon/2)**2;
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    }
+    function save() { localStorage.setItem('delivery_v3', JSON.stringify(locations)); }
 
     async function addLocation() {
         const addr = document.getElementById('addressInput').value;
+        const phone = document.getElementById('phoneInput').value;
         if(!addr) return;
+
         const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${addr}`);
         const data = await res.json();
         if (data.length > 0) {
-            locations.push({ name: addr, lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), completed: false });
-            saveToLocal();
-            updateUI();
+            locations.push({ 
+                name: addr, 
+                phone: phone, 
+                lat: parseFloat(data[0].lat), 
+                lng: parseFloat(data[0].lon), 
+                completed: false 
+            });
             document.getElementById('addressInput').value = '';
+            document.getElementById('phoneInput').value = '';
+            save(); updateUI();
         }
     }
 
@@ -167,44 +115,60 @@
         list.innerHTML = '';
         markers.forEach(m => map.removeLayer(m));
         markers = [];
-        let totalMeters = 0;
+        let totalM = 0;
 
         locations.forEach((loc, i) => {
-            let eta = "";
-            if (i > 0) {
-                const d = getDist(locations[i-1], loc) * 1.3;
-                totalMeters += d;
-                eta = `<div class="eta-label">⏱ כ-${Math.round(d/500)} דק' נסיעה</div>`;
-            }
+            if (i > 0) totalM += getDistance(locations[i-1], loc) * 1.3;
 
             const item = document.createElement('div');
             item.className = `route-item ${loc.completed ? 'completed' : ''}`;
             item.innerHTML = `
-                <div style="display:flex; align-items:center; gap:12px;">
-                    <div class="check-box" onclick="toggle(${i})">${loc.completed ? '✓' : ''}</div>
-                    <div><b>${i+1}. ${loc.name}</b>${eta}</div>
+                <div class="item-header">
+                    <div>
+                        <small>תחנה ${i+1}</small>
+                        <div style="font-weight:700; font-size:1.1rem;">${loc.name}</div>
+                    </div>
+                    <div class="v-check" onclick="toggleComplete(${i})">${loc.completed ? '✓' : ''}</div>
                 </div>
-                <a href="https://waze.com/ul?ll=${loc.lat},${loc.lng}&navigate=yes" class="nav-btn waze">Waze</a>
+                <div class="actions">
+                    <a href="https://waze.com/ul?ll=${loc.lat},${loc.lng}&navigate=yes" class="action-btn waze">Waze</a>
+                    <a href="https://www.google.com/maps/search/?api=1&query=$${loc.lat},${loc.lng}" class="action-btn gmaps">Maps</a>
+                    ${loc.phone ? `<a href="tel:${loc.phone}" class="action-btn call">📞 חיוג</a>` : ''}
+                    <button class="action-btn camera" onclick="openCamera()">📷 צילום</button>
+                </div>
             `;
             list.appendChild(item);
-            markers.push(L.marker([loc.lat, loc.lng]).addTo(map));
+            markers.push(L.circleMarker([loc.lat, loc.lng], { radius: 8, color: var(--accent) }).addTo(map));
         });
 
-        if (locations.length > 0) {
-            document.getElementById('statsBar').style.display = 'grid';
-            document.getElementById('totalDist').innerText = (totalMeters/1000).toFixed(1) + ' ק"מ';
-            document.getElementById('totalTime').innerText = (Math.round(totalMeters/500) + locations.length*5) + ' דקות';
-            const group = new L.featureGroup(markers);
-            map.fitBounds(group.getBounds().pad(0.2));
-        } else {
-            document.getElementById('statsBar').style.display = 'none';
+        if(locations.length > 1) {
+            document.getElementById('statsBar').style.display = 'flex';
+            document.getElementById('totalDist').innerText = (totalM/1000).toFixed(1) + " ק\"מ";
+            document.getElementById('totalTime').innerText = Math.round(totalM/500 + locations.length*5) + " דק'";
+            map.fitBounds(new L.featureGroup(markers).getBounds().pad(0.2));
         }
     }
 
-    function toggle(i) {
+    function toggleComplete(i) {
         locations[i].completed = !locations[i].completed;
-        saveToLocal();
-        updateUI();
+        if(locations[i].completed) document.getElementById('pingSound').play();
+        save(); updateUI();
+    }
+
+    function openCamera() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.capture = 'environment';
+        input.click();
+    }
+
+    function getDistance(p1, p2) {
+        const R = 6371e3;
+        const dLat = (p2.lat-p1.lat) * Math.PI/180;
+        const dLon = (p2.lng-p1.lng) * Math.PI/180;
+        const a = Math.sin(dLat/2)**2 + Math.cos(p1.lat*Math.PI/180) * Math.cos(p2.lat*Math.PI/180) * Math.sin(dLon/2)**2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
     async function optimizeRoute() {
@@ -215,19 +179,11 @@
             body: JSON.stringify({ locations })
         });
         locations = (await res.json()).map(l => ({...l, completed: false}));
-        saveToLocal();
-        updateUI();
+        save(); updateUI();
     }
 
-    function shareToWhatsApp() {
-        let text = "*רשימת חלוקה מעודכנת:* %0A";
-        locations.forEach((l, i) => {
-            text += `${i+1}. ${l.name} ${l.completed ? '✅' : '⏳'} %0A`;
-        });
-        window.open(`https://wa.me/?text=${text}`, '_blank');
-    }
+    function clearAll() { if(confirm("למחוק הכל?")) { locations = []; save(); updateUI(); } }
 
-    // טעינה ראשונית
     updateUI();
 </script>
 </body>
