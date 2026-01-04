@@ -15,7 +15,6 @@ def optimize():
     data = request.json
     locations = data.get('locations', [])
     if not locations: return jsonify([])
-    
     unvisited = locations
     optimized_route = [unvisited.pop(0)]
     while unvisited:
