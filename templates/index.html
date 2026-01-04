@@ -10,36 +10,25 @@
         :root { --brand: #1a1a1a; --accent: #d4a373; --bg: #fdfbf7; --success: #28a745; --wa: #25d366; }
         body { font-family: 'Assistant', sans-serif; background: var(--bg); margin: 0; padding: 15px; color: #333; direction: rtl; }
         .container { max-width: 600px; margin: 0 auto; }
-        
         .glass-card { background: white; border-radius: 15px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 15px; }
         input, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 1rem; font-family: inherit; box-sizing: border-box; margin-bottom: 10px; }
-        
         #map { height: 250px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #eee; z-index: 1; }
-
         button { border: none; border-radius: 10px; cursor: pointer; font-weight: bold; transition: 0.2s; font-family: inherit; }
         .btn-add { background: var(--brand); color: white; width: 100%; padding: 12px; }
         .btn-opt { background: var(--accent); color: white; width: 100%; padding: 15px; font-size: 1.1rem; }
         .btn-import { background: var(--wa); color: white; width: 100%; padding: 12px; margin-bottom: 10px; }
-
-        .route-item { 
-            background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px;
-            border-right: 5px solid var(--accent); display: flex; flex-direction: column; gap: 10px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
+        .route-item { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; border-right: 5px solid var(--accent); display: flex; flex-direction: column; gap: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .route-item.completed { opacity: 0.5; filter: grayscale(1); border-right-color: #ccc; }
-        
         .actions { display: flex; gap: 6px; flex-wrap: wrap; }
         .action-btn { padding: 8px 10px; border-radius: 8px; font-size: 0.8rem; text-decoration: none; color: white; font-weight: bold; display: flex; align-items: center; gap: 4px; }
         .waze { background: #33ccff; }
         .gmaps { background: #4285f4; }
         .call { background: var(--success); }
         .whatsapp { background: var(--wa); }
-
         .v-check { width: 35px; height: 35px; border: 2px solid var(--success); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--success); font-weight: bold; }
         .completed .v-check { background: var(--success); color: white; }
-
         .stats { display: flex; justify-content: space-around; background: var(--brand); color: white; padding: 12px; border-radius: 12px; margin-bottom: 15px; font-size: 0.9rem; }
-        #loadingOverlay { display: none; text-align: center; color: var(--accent); font-weight: bold; margin-bottom: 10px; }
+        #loadingOverlay { display: none; text-align: center; color: var(--brand); background: #eee; padding: 10px; border-radius: 10px; margin-bottom: 10px; font-size: 0.9rem; }
     </style>
 </head>
 <body>
@@ -56,16 +45,13 @@
 
     <div class="glass-card">
         <p style="margin: 0 0 5px 0; font-size: 0.9rem;">ייבוא רשימת כתובות (אחת בשורה):</p>
-        <textarea id="bulkImport" placeholder="הדבק כאן את הכתובות מהוואטסאפ..."></textarea>
-        <div id="loadingOverlay">מעבד רשימה... נא להמתין...</div>
-        <button class="btn-import" id="importBtn" onclick="importFromText()">ייבא רשימה מהודעה ✨</button>
-        
+        <textarea id="bulkImport" placeholder="הדבק כאן כתובות מהוואטסאפ..."></textarea>
+        <div id="loadingOverlay">טוען כתובות... <span id="progressCount">0/0</span></div>
+        <button class="btn-import" id="importBtn" onclick="importFromText()">ייבא רשימה ✨</button>
         <hr style="opacity: 0.1; margin: 15px 0;">
-        
         <input type="text" id="addressInput" placeholder="הוספה ידנית: עיר, רחוב ומספר">
-        <input type="tel" id="phoneInput" placeholder="טלפון לקוח (אופציונלי)">
+        <input type="tel" id="phoneInput" placeholder="טלפון לקוח">
         <button class="btn-add" onclick="addLocation()">הוסף כתובת בודדת +</button>
-        
         <div id="map" style="margin-top: 15px;"></div>
         <button class="btn-opt" onclick="optimizeRoute()">סדר מסלול אופטימלי 🚀</button>
     </div>
@@ -80,41 +66,45 @@
 <script>
     var map = L.map('map').setView([32.0853, 34.7818], 10);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-    
-    var locations = JSON.parse(localStorage.getItem('delivery_v7')) || [];
+    var locations = JSON.parse(localStorage.getItem('delivery_v8')) || [];
     var markers = [];
 
-    function save() { localStorage.setItem('delivery_v7', JSON.stringify(locations)); }
+    function save() { localStorage.setItem('delivery_v8', JSON.stringify(locations)); }
 
     async function importFromText() {
         const text = document.getElementById('bulkImport').value;
         const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 3);
         if(lines.length === 0) return alert("לא נמצאו כתובות תקינות");
 
-        document.getElementById('loadingOverlay').style.display = 'block';
-        document.getElementById('importBtn').disabled = true;
+        const btn = document.getElementById('importBtn');
+        const overlay = document.getElementById('loadingOverlay');
+        const progress = document.getElementById('progressCount');
 
-        let tempLocations = [];
+        btn.disabled = true;
+        overlay.style.display = 'block';
+        
+        let count = 0;
         for (let addr of lines) {
+            count++;
+            progress.innerText = `${count}/${lines.length}`;
             try {
                 const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}`);
                 const data = await res.json();
                 if (data && data.length > 0) {
-                    tempLocations.push({
+                    locations.push({
                         name: addr, phone: '',
                         lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon),
                         completed: false
                     });
+                    save(); // שמירה אחרי כל הצלחה
                 }
-                await new Promise(r => setTimeout(r, 600)); // השהיה למניעת חסימה
-            } catch (e) { console.log("Error searching: " + addr); }
+                await new Promise(r => setTimeout(r, 1000)); // השהיה של שנייה שלמה למניעת חסימה
+            } catch (e) { console.error("Error: " + addr); }
         }
 
-        locations = [...locations, ...tempLocations];
-        save();
         document.getElementById('bulkImport').value = '';
-        document.getElementById('loadingOverlay').style.display = 'none';
-        document.getElementById('importBtn').disabled = false;
+        overlay.style.display = 'none';
+        btn.disabled = false;
         updateUI();
     }
 
@@ -145,15 +135,11 @@
             if (i > 0) totalM += getDistance(locations[i-1], loc) * 1.3;
             const item = document.createElement('div');
             item.className = `route-item ${loc.completed ? 'completed' : ''}`;
-            
-            const msg = encodeURIComponent("שלום, אני השליח של החנות ואני בדרך אליך עם המשלוח!");
+            const msg = encodeURIComponent("שלום, אני השליח בדרך אליך עם המשלוח!");
             const waUrl = `https://wa.me/972${loc.phone ? loc.phone.replace(/^0/, '') : ''}?text=${msg}`;
 
             item.innerHTML = `
-                <div class="item-header">
-                    <div><b>${i+1}. ${loc.name}</b></div>
-                    <div class="v-check" onclick="toggleComplete(${i})">${loc.completed ? '✓' : ''}</div>
-                </div>
+                <div class="item-header"><div><b>${i+1}. ${loc.name}</b></div><div class="v-check" onclick="toggleComplete(${i})">${loc.completed ? '✓' : ''}</div></div>
                 <div class="actions">
                     <a href="https://waze.com/ul?ll=${loc.lat},${loc.lng}&navigate=yes" target="_blank" class="action-btn waze">Waze</a>
                     <a href="https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}" target="_blank" class="action-btn gmaps">Maps</a>
