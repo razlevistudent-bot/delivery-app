@@ -8,47 +8,86 @@
     <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
         :root { --brand: #1a1a1a; --accent: #d4a373; --bg: #fdfbf7; --success: #28a745; --wa: #25d366; }
-        body { font-family: 'Assistant', sans-serif; background: var(--bg); margin: 0; padding: 10px; direction: rtl; }
+        body { font-family: 'Assistant', sans-serif; background: var(--bg); margin: 0; padding: 15px; direction: rtl; }
         .container { max-width: 500px; margin: 0 auto; }
-        .glass-card { background: white; border-radius: 15px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 15px; }
-        textarea, input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 1rem; margin-bottom: 10px; box-sizing: border-box; }
-        #map { height: 250px; border-radius: 12px; margin-bottom: 15px; z-index: 1; border: 1px solid #eee; }
-        button { border: none; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; padding: 14px; font-size: 1rem; transition: 0.2s; }
-        .btn-import { background: var(--wa); color: white; margin-bottom: 10px; }
-        .btn-opt { background: var(--accent); color: white; margin-top: 10px; }
-        .route-item { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; border-right: 5px solid var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .route-item.completed { opacity: 0.5; filter: grayscale(1); }
-        .actions { display: flex; gap: 8px; margin-top: 10px; }
-        .action-btn { flex: 1; text-align: center; padding: 8px; border-radius: 8px; color: white; text-decoration: none; font-size: 0.8rem; font-weight: bold; }
-        .waze { background: #33ccff; } .gmaps { background: #4285f4; } .call { background: var(--success); }
-        .v-check { width: 35px; height: 35px; border: 2px solid var(--success); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--success); }
+        .glass-card { background: white; border-radius: 20px; padding: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #eee; }
+        
+        label { display: block; margin-bottom: 5px; font-size: 0.9rem; font-weight: bold; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 12px; font-size: 1rem; margin-bottom: 15px; box-sizing: border-box; font-family: inherit; }
+        
+        .phone-group { display: flex; gap: 8px; }
+        .phone-group select { flex: 0.4; }
+        .phone-group input { flex: 1; }
+
+        #map { height: 250px; border-radius: 15px; margin-bottom: 20px; z-index: 1; border: 2px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        
+        button { border: none; border-radius: 12px; cursor: pointer; font-weight: bold; width: 100%; padding: 15px; font-size: 1.1rem; transition: 0.2s; font-family: inherit; }
+        .btn-add { background: var(--brand); color: white; margin-bottom: 10px; }
+        .btn-opt { background: var(--accent); color: white; box-shadow: 0 4px 15px rgba(212, 163, 115, 0.3); }
+
+        .route-item { background: white; padding: 18px; border-radius: 16px; margin-bottom: 12px; border-right: 6px solid var(--accent); box-shadow: 0 4px 12px rgba(0,0,0,0.03); position: relative; }
+        .route-item.completed { opacity: 0.5; filter: grayscale(1); border-right-color: #ccc; }
+        
+        .item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        
+        .action-btn { flex: 1; text-align: center; padding: 10px; border-radius: 10px; color: white; text-decoration: none; font-size: 0.85rem; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 5px; }
+        .waze { background: #33ccff; } .gmaps { background: #4285f4; } .call { background: var(--success); } .whatsapp { background: var(--wa); }
+        
+        .v-check { width: 40px; height: 400px; max-height: 40px; border: 2px solid var(--success); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--success); font-size: 1.3rem; }
         .completed .v-check { background: var(--success); color: white; }
-        #status-box { display: none; background: #333; color: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; text-align: center; }
-        .progress-bar { height: 8px; background: #555; border-radius: 4px; margin-top: 10px; overflow: hidden; }
-        .progress-fill { height: 100%; background: var(--wa); width: 0%; transition: 0.3s; }
+        
+        .stats { display: flex; justify-content: space-around; background: var(--brand); color: white; padding: 12px; border-radius: 15px; margin-bottom: 15px; font-size: 0.9rem; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <header style="text-align: center; margin-bottom: 15px;">
-        <h2 style="margin:0;">DELIVERY PRO</h2>
+    <header style="text-align: center; margin-bottom: 20px;">
+        <h1 style="margin:0; color: var(--brand); letter-spacing: -1px;">DELIVERY PRO</h1>
+        <p style="margin:5px 0; color: #666;">ניהול חלוקה ידני ומדויק</p>
     </header>
 
-    <div id="status-box">
-        <div id="status-text">מתחיל ייבוא...</div>
-        <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+    <div class="stats" id="statsBar" style="display:none;">
+        <div>מרחק: <b id="totalDist">0</b></div>
+        <div>זמן חלוקה: <b id="totalTime">0</b></div>
     </div>
 
     <div class="glass-card">
-        <textarea id="bulkImport" placeholder="הדבק כאן רשימת כתובות (כתובת בכל שורה)"></textarea>
-        <button class="btn-import" id="importBtn" onclick="startSmartImport()">ייבא רשימה כעת ✨</button>
+        <label>כתובת למשלוח</label>
+        <input type="text" id="addressInput" placeholder="עיר, רחוב ומספר בית">
+        
+        <label>טלפון לקוח</label>
+        <div class="phone-group">
+            <select id="phonePrefix">
+                <option value="050">050</option>
+                <option value="051">051</option>
+                <option value="052">052</option>
+                <option value="053">053</option>
+                <option value="054">054</option>
+                <option value="055">055</option>
+                <option value="058">058</option>
+                <option value="077">077</option>
+                <option value="02">02</option>
+                <option value="03">03</option>
+                <option value="04">04</option>
+                <option value="08">08</option>
+                <option value="09">09</option>
+            </select>
+            <input type="tel" id="phoneNumber" placeholder="7 ספרות" maxlength="7">
+        </div>
+
+        <button class="btn-add" onclick="addNewLocation()">הוסף תחנה למסלול +</button>
+        
         <div id="map"></div>
         <button class="btn-opt" onclick="optimizeRoute()">סדר מסלול אופטימלי 🚀</button>
     </div>
 
     <div id="addressList"></div>
-    <center><button onclick="clearAll()" style="background:none; color:red; font-size:0.8rem; width: auto; padding: 5px;">איפוס הכל</button></center>
+    
+    <center>
+        <button onclick="clearAll()" style="background:none; color:red; margin-top: 20px; font-size: 0.8rem; border: 1px solid red; width: auto; padding: 5px 15px;">איפוס כל הנתונים</button>
+    </center>
 </div>
 
 <audio id="pingSound" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3"></audio>
@@ -57,55 +96,41 @@
 <script>
     var map = L.map('map').setView([32.0853, 34.7818], 10);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-    var locations = JSON.parse(localStorage.getItem('delivery_v11')) || [];
+    
+    var locations = JSON.parse(localStorage.getItem('delivery_final')) || [];
     var markers = [];
 
-    function save() { localStorage.setItem('delivery_v11', JSON.stringify(locations)); }
+    function save() { localStorage.setItem('delivery_final', JSON.stringify(locations)); }
 
-    async function startSmartImport() {
-        const text = document.getElementById('bulkImport').value;
-        const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 3);
-        if(lines.length === 0) return alert("נא להזין כתובות");
+    async function addNewLocation() {
+        const addr = document.getElementById('addressInput').value;
+        const prefix = document.getElementById('phonePrefix').value;
+        const num = document.getElementById('phoneNumber').value;
+        const fullPhone = num ? prefix + num : '';
 
-        const btn = document.getElementById('importBtn');
-        const statusBox = document.getElementById('status-box');
-        const statusText = document.getElementById('status-text');
-        const progressFill = document.getElementById('progress-fill');
+        if(!addr) return alert("נא להזין כתובת");
 
-        btn.disabled = true;
-        statusBox.style.display = 'block';
-
-        for (let i = 0; i < lines.length; i++) {
-            const addr = lines[i];
-            statusText.innerText = `מחפש: ${addr}`;
-            progressFill.style.width = `${((i + 1) / lines.length) * 100}%`;
-
-            try {
-                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}&limit=1`;
-                const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-                const data = await response.json();
-
-                if (data && data.length > 0) {
-                    locations.push({
-                        name: addr,
-                        lat: parseFloat(data[0].lat),
-                        lng: parseFloat(data[0].lon),
-                        phone: '',
-                        completed: false
-                    });
-                    save();
-                    updateUI();
-                }
-            } catch (e) { console.error("נכשל בכתובת: " + addr); }
-
-            // השהיה דינמית - גדלה ככל שיש יותר כתובות כדי למנוע חסימה
-            await new Promise(r => setTimeout(r, 2000)); 
-        }
-
-        statusBox.style.display = 'none';
-        btn.disabled = false;
-        document.getElementById('bulkImport').value = '';
-        alert("הייבוא הושלם בהצלחה!");
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}&limit=1`);
+            const data = await res.json();
+            
+            if (data && data.length > 0) {
+                locations.push({
+                    name: addr,
+                    phone: fullPhone,
+                    lat: parseFloat(data[0].lat),
+                    lng: parseFloat(data[0].lon),
+                    completed: false
+                });
+                save();
+                updateUI();
+                // איפוס שדות
+                document.getElementById('addressInput').value = '';
+                document.getElementById('phoneNumber').value = '';
+            } else {
+                alert("הכתובת לא נמצאה במפה, נסה לדייק (שם עיר ורחוב)");
+            }
+        } catch (e) { alert("שגיאת תקשורת"); }
     }
 
     function updateUI() {
@@ -113,29 +138,55 @@
         list.innerHTML = '';
         markers.forEach(m => map.removeLayer(m));
         markers = [];
+        let totalM = 0;
 
         locations.forEach((loc, i) => {
+            if (i > 0) totalM += getDistance(locations[i-1], loc) * 1.3;
+            
             const item = document.createElement('div');
             item.className = `route-item ${loc.completed ? 'completed' : ''}`;
+            
+            const waMsg = encodeURIComponent("שלום, אני השליח בדרך אליך עם המשלוח!");
+            const waUrl = `https://wa.me/972${loc.phone ? loc.phone.replace(/^0/, '') : ''}?text=${waMsg}`;
+
             item.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <b>${i+1}. ${loc.name}</b>
+                <div class="item-header">
+                    <div>
+                        <span style="background:#eee; padding:2px 8px; border-radius:5px; font-size:0.8rem; font-weight:bold; margin-left:5px;">${i+1}</span>
+                        <b>${loc.name}</b>
+                    </div>
                     <div class="v-check" onclick="toggle(${i})">${loc.completed ? '✓' : ''}</div>
                 </div>
                 <div class="actions">
                     <a href="https://waze.com/ul?ll=${loc.lat},${loc.lng}&navigate=yes" target="_blank" class="action-btn waze">Waze</a>
                     <a href="https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}" target="_blank" class="action-btn gmaps">Maps</a>
+                    ${loc.phone ? `<a href="tel:${loc.phone}" class="action-btn call">חיוג</a>` : ''}
+                    ${loc.phone ? `<a href="${waUrl}" target="_blank" class="action-btn whatsapp">וואטסאפ</a>` : ''}
                 </div>`;
             list.appendChild(item);
             markers.push(L.marker([loc.lat, loc.lng]).addTo(map));
         });
-        if(markers.length > 0) map.fitBounds(new L.featureGroup(markers).getBounds().pad(0.2));
+
+        if(locations.length > 0) {
+            document.getElementById('statsBar').style.display = 'flex';
+            document.getElementById('totalDist').innerText = (totalM/1000).toFixed(1) + " ק\"מ";
+            document.getElementById('totalTime').innerText = Math.round(totalM/500 + locations.length*5) + " דק'";
+            map.fitBounds(new L.featureGroup(markers).getBounds().pad(0.2));
+        }
     }
 
     function toggle(i) {
         locations[i].completed = !locations[i].completed;
         if(locations[i].completed) document.getElementById('pingSound').play().catch(() => {});
         save(); updateUI();
+    }
+
+    function getDistance(p1, p2) {
+        const R = 6371e3;
+        const dLat = (p2.lat-p1.lat) * Math.PI/180;
+        const dLon = (p2.lng-p1.lng) * Math.PI/180;
+        const a = Math.sin(dLat/2)**2 + Math.cos(p1.lat*Math.PI/180) * Math.cos(p2.lat*Math.PI/180) * Math.sin(dLon/2)**2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
     async function optimizeRoute() {
