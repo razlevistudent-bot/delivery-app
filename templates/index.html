@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
-        :root { --brand: #1a1a1a; --accent: #d4a373; --bg: #fdfbf7; --success: #28a745; --wa: #25d366; }
+        :root { --brand: #1a1a1a; --accent: #d4a373; --bg: #fdfbf7; --success: #28a745; --wa: #25d366; --report: #6c757d; }
         body { font-family: 'Assistant', sans-serif; background: var(--bg); margin: 0; padding: 15px; direction: rtl; }
         .container { max-width: 500px; margin: 0 auto; }
         .glass-card { background: white; border-radius: 20px; padding: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #eee; }
@@ -23,34 +23,32 @@
         
         button { border: none; border-radius: 12px; cursor: pointer; font-weight: bold; width: 100%; padding: 15px; font-size: 1.1rem; transition: 0.2s; font-family: inherit; }
         .btn-add { background: var(--brand); color: white; margin-bottom: 10px; }
-        .btn-opt { background: var(--accent); color: white; box-shadow: 0 4px 15px rgba(212, 163, 115, 0.3); }
+        .btn-opt { background: var(--accent); color: white; }
 
-        .route-item { background: white; padding: 18px; border-radius: 16px; margin-bottom: 12px; border-right: 6px solid var(--accent); box-shadow: 0 4px 12px rgba(0,0,0,0.03); position: relative; }
-        .route-item.completed { opacity: 0.5; filter: grayscale(1); border-right-color: #ccc; }
+        .route-item { background: white; padding: 18px; border-radius: 16px; margin-bottom: 12px; border-right: 6px solid var(--accent); box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+        .route-item.completed { border-right-color: var(--success); background: #f8fff9; }
         
         .item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
         .actions { display: flex; gap: 8px; flex-wrap: wrap; }
         
-        .action-btn { flex: 1; text-align: center; padding: 10px; border-radius: 10px; color: white; text-decoration: none; font-size: 0.85rem; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 5px; }
+        .action-btn { flex: 1; text-align: center; padding: 10px; border-radius: 10px; color: white; text-decoration: none; font-size: 0.85rem; font-weight: bold; display: flex; align-items: center; justify-content: center; }
         .waze { background: #33ccff; } .gmaps { background: #4285f4; } .call { background: var(--success); } .whatsapp { background: var(--wa); }
+        .btn-report { background: var(--report); width: 100%; margin-top: 10px; font-size: 0.8rem; padding: 8px; }
         
-        .v-check { width: 40px; height: 400px; max-height: 40px; border: 2px solid var(--success); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--success); font-size: 1.3rem; }
+        .v-check { width: 40px; height: 40px; border: 2px solid var(--success); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--success); font-size: 1.3rem; }
         .completed .v-check { background: var(--success); color: white; }
-        
-        .stats { display: flex; justify-content: space-around; background: var(--brand); color: white; padding: 12px; border-radius: 15px; margin-bottom: 15px; font-size: 0.9rem; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <header style="text-align: center; margin-bottom: 20px;">
-        <h1 style="margin:0; color: var(--brand); letter-spacing: -1px;">DELIVERY PRO</h1>
-        <p style="margin:5px 0; color: #666;">ניהול חלוקה ידני ומדויק</p>
+    <header style="text-align: center; margin-bottom: 10px;">
+        <h1 style="margin:0; color: var(--brand);">DELIVERY PRO</h1>
     </header>
 
-    <div class="stats" id="statsBar" style="display:none;">
-        <div>מרחק: <b id="totalDist">0</b></div>
-        <div>זמן חלוקה: <b id="totalTime">0</b></div>
+    <div class="glass-card" style="padding: 10px 20px; margin-bottom: 10px; background: #eee;">
+        <label style="font-size: 0.7rem;">מספר מנהל לדיווח (בוואטסאפ):</label>
+        <input type="tel" id="managerPhone" placeholder="למשל: 0501234567" style="margin-bottom:0; padding: 8px;" onchange="saveManager()">
     </div>
 
     <div class="glass-card">
@@ -67,7 +65,6 @@
                 <option value="054">054</option>
                 <option value="055">055</option>
                 <option value="058">058</option>
-                <option value="077">077</option>
                 <option value="02">02</option>
                 <option value="03">03</option>
                 <option value="04">04</option>
@@ -77,17 +74,13 @@
             <input type="tel" id="phoneNumber" placeholder="7 ספרות" maxlength="7">
         </div>
 
-        <button class="btn-add" onclick="addNewLocation()">הוסף תחנה למסלול +</button>
-        
+        <button class="btn-add" onclick="addNewLocation()">הוסף תחנה +</button>
         <div id="map"></div>
         <button class="btn-opt" onclick="optimizeRoute()">סדר מסלול אופטימלי 🚀</button>
     </div>
 
     <div id="addressList"></div>
-    
-    <center>
-        <button onclick="clearAll()" style="background:none; color:red; margin-top: 20px; font-size: 0.8rem; border: 1px solid red; width: auto; padding: 5px 15px;">איפוס כל הנתונים</button>
-    </center>
+    <center><button onclick="clearAll()" style="background:none; color:red; font-size: 0.8rem; border: 1px solid red; width: auto; padding: 5px 15px; margin: 20px 0;">איפוס הכל</button></center>
 </div>
 
 <audio id="pingSound" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3"></audio>
@@ -97,40 +90,36 @@
     var map = L.map('map').setView([32.0853, 34.7818], 10);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
     
-    var locations = JSON.parse(localStorage.getItem('delivery_final')) || [];
+    var locations = JSON.parse(localStorage.getItem('delivery_v12')) || [];
     var markers = [];
+    document.getElementById('managerPhone').value = localStorage.getItem('manager_num') || '';
 
-    function save() { localStorage.setItem('delivery_final', JSON.stringify(locations)); }
+    function save() { localStorage.setItem('delivery_v12', JSON.stringify(locations)); }
+    function saveManager() { localStorage.setItem('manager_num', document.getElementById('managerPhone').value); }
 
     async function addNewLocation() {
         const addr = document.getElementById('addressInput').value;
         const prefix = document.getElementById('phonePrefix').value;
         const num = document.getElementById('phoneNumber').value;
-        const fullPhone = num ? prefix + num : '';
-
         if(!addr) return alert("נא להזין כתובת");
 
         try {
             const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}&limit=1`);
             const data = await res.json();
-            
             if (data && data.length > 0) {
                 locations.push({
                     name: addr,
-                    phone: fullPhone,
+                    phone: num ? prefix + num : '',
                     lat: parseFloat(data[0].lat),
                     lng: parseFloat(data[0].lon),
-                    completed: false
+                    completed: false,
+                    finishTime: null
                 });
-                save();
-                updateUI();
-                // איפוס שדות
+                save(); updateUI();
                 document.getElementById('addressInput').value = '';
                 document.getElementById('phoneNumber').value = '';
-            } else {
-                alert("הכתובת לא נמצאה במפה, נסה לדייק (שם עיר ורחוב)");
-            }
-        } catch (e) { alert("שגיאת תקשורת"); }
+            } else { alert("כתובת לא נמצאה"); }
+        } catch (e) { alert("שגיאה בחיפוש"); }
     }
 
     function updateUI() {
@@ -138,55 +127,45 @@
         list.innerHTML = '';
         markers.forEach(m => map.removeLayer(m));
         markers = [];
-        let totalM = 0;
 
         locations.forEach((loc, i) => {
-            if (i > 0) totalM += getDistance(locations[i-1], loc) * 1.3;
-            
             const item = document.createElement('div');
             item.className = `route-item ${loc.completed ? 'completed' : ''}`;
             
-            const waMsg = encodeURIComponent("שלום, אני השליח בדרך אליך עם המשלוח!");
+            const waMsg = encodeURIComponent(`היי, המשלוח ל-${loc.name} הגיע!`);
             const waUrl = `https://wa.me/972${loc.phone ? loc.phone.replace(/^0/, '') : ''}?text=${waMsg}`;
+            
+            // הודעת דיווח למנהל
+            const managerNum = document.getElementById('managerPhone').value;
+            const reportMsg = encodeURIComponent(`✅ משלוח הושלם!\n📍 כתובת: ${loc.name}\n📞 לקוח: ${loc.phone}\n⏰ זמן סיום: ${loc.finishTime || ''}`);
+            const reportUrl = `https://wa.me/972${managerNum.replace(/^0/, '')}?text=${reportMsg}`;
 
             item.innerHTML = `
                 <div class="item-header">
-                    <div>
-                        <span style="background:#eee; padding:2px 8px; border-radius:5px; font-size:0.8rem; font-weight:bold; margin-left:5px;">${i+1}</span>
-                        <b>${loc.name}</b>
-                    </div>
+                    <div><b>${i+1}. ${loc.name}</b></div>
                     <div class="v-check" onclick="toggle(${i})">${loc.completed ? '✓' : ''}</div>
                 </div>
                 <div class="actions">
                     <a href="https://waze.com/ul?ll=${loc.lat},${loc.lng}&navigate=yes" target="_blank" class="action-btn waze">Waze</a>
-                    <a href="https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}" target="_blank" class="action-btn gmaps">Maps</a>
-                    ${loc.phone ? `<a href="tel:${loc.phone}" class="action-btn call">חיוג</a>` : ''}
-                    ${loc.phone ? `<a href="${waUrl}" target="_blank" class="action-btn whatsapp">וואטסאפ</a>` : ''}
-                </div>`;
+                    <a href="tel:${loc.phone}" class="action-btn call" ${!loc.phone ? 'style="display:none"' : ''}>חיוג</a>
+                    <a href="${waUrl}" target="_blank" class="action-btn whatsapp" ${!loc.phone ? 'style="display:none"' : ''}>וואטסאפ</a>
+                </div>
+                ${loc.completed ? `<a href="${reportUrl}" target="_blank" class="action-btn btn-report">שלח דיווח סיום למנהל ✉️</a>` : ''}
+            `;
             list.appendChild(item);
             markers.push(L.marker([loc.lat, loc.lng]).addTo(map));
         });
-
-        if(locations.length > 0) {
-            document.getElementById('statsBar').style.display = 'flex';
-            document.getElementById('totalDist').innerText = (totalM/1000).toFixed(1) + " ק\"מ";
-            document.getElementById('totalTime').innerText = Math.round(totalM/500 + locations.length*5) + " דק'";
-            map.fitBounds(new L.featureGroup(markers).getBounds().pad(0.2));
-        }
+        if(markers.length > 0) map.fitBounds(new L.featureGroup(markers).getBounds().pad(0.2));
     }
 
     function toggle(i) {
         locations[i].completed = !locations[i].completed;
-        if(locations[i].completed) document.getElementById('pingSound').play().catch(() => {});
+        if(locations[i].completed) {
+            document.getElementById('pingSound').play().catch(() => {});
+            const now = new Date();
+            locations[i].finishTime = now.getHours() + ":" + (now.getMinutes()<10?'0':'') + now.getMinutes();
+        }
         save(); updateUI();
-    }
-
-    function getDistance(p1, p2) {
-        const R = 6371e3;
-        const dLat = (p2.lat-p1.lat) * Math.PI/180;
-        const dLon = (p2.lng-p1.lng) * Math.PI/180;
-        const a = Math.sin(dLat/2)**2 + Math.cos(p1.lat*Math.PI/180) * Math.cos(p2.lat*Math.PI/180) * Math.sin(dLon/2)**2;
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
     async function optimizeRoute() {
@@ -196,7 +175,7 @@
         save(); updateUI();
     }
 
-    function clearAll() { if(confirm("למחוק הכל?")) { locations = []; save(); updateUI(); location.reload(); } }
+    function clearAll() { if(confirm("למחוק הכל?")) { locations = []; save(); updateUI(); } }
     updateUI();
 </script>
 </body>
