@@ -10,54 +10,82 @@
         :root { --brand: #1a1a1a; --accent: #d4a373; --bg: #fdfbf7; --success: #28a745; --wa: #25d366; }
         body { font-family: 'Assistant', sans-serif; background: var(--bg); margin: 0; padding: 15px; color: #333; direction: rtl; }
         .container { max-width: 600px; margin: 0 auto; }
+        
         .glass-card { background: white; border-radius: 15px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 15px; }
         input, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 1rem; font-family: inherit; box-sizing: border-box; margin-bottom: 10px; }
+        textarea { height: 100px; border-color: var(--accent); }
+
         #map { height: 250px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #eee; z-index: 1; }
+
         button { border: none; border-radius: 10px; cursor: pointer; font-weight: bold; transition: 0.2s; font-family: inherit; }
-        .btn-add { background: var(--brand); color: white; width: 100%; padding: 12px; }
+        .btn-add { background: var(--brand); color: white; width: 100%; padding: 12px; margin-bottom: 5px; }
         .btn-opt { background: var(--accent); color: white; width: 100%; padding: 15px; font-size: 1.1rem; }
         .btn-import { background: var(--wa); color: white; width: 100%; padding: 12px; margin-bottom: 10px; }
-        .route-item { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; border-right: 5px solid var(--accent); display: flex; flex-direction: column; gap: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+
+        .route-item { 
+            background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px;
+            border-right: 5px solid var(--accent); display: flex; flex-direction: column; gap: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
         .route-item.completed { opacity: 0.5; filter: grayscale(1); border-right-color: #ccc; }
+        
+        .item-header { display: flex; justify-content: space-between; align-items: flex-start; }
         .actions { display: flex; gap: 6px; flex-wrap: wrap; }
-        .action-btn { padding: 8px 10px; border-radius: 8px; font-size: 0.8rem; text-decoration: none; color: white; font-weight: bold; display: flex; align-items: center; gap: 4px; }
+        
+        .action-btn { 
+            padding: 8px 12px; border-radius: 8px; font-size: 0.85rem; text-decoration: none; 
+            color: white; font-weight: bold; display: flex; align-items: center; gap: 4px;
+        }
         .waze { background: #33ccff; }
         .gmaps { background: #4285f4; }
         .call { background: var(--success); }
         .whatsapp { background: var(--wa); }
-        .v-check { width: 35px; height: 35px; border: 2px solid var(--success); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--success); font-weight: bold; }
+
+        .v-check { 
+            width: 35px; height: 35px; border: 2px solid var(--success); 
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 1.2rem; color: var(--success);
+        }
         .completed .v-check { background: var(--success); color: white; }
+
         .stats { display: flex; justify-content: space-around; background: var(--brand); color: white; padding: 12px; border-radius: 12px; margin-bottom: 15px; font-size: 0.9rem; }
-        #loadingOverlay { display: none; text-align: center; color: var(--brand); background: #eee; padding: 10px; border-radius: 10px; margin-bottom: 10px; font-size: 0.9rem; }
+        #loadingOverlay { display: none; text-align: center; color: var(--brand); background: #eee; padding: 15px; border-radius: 12px; margin-bottom: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <header style="text-align: center; margin-bottom: 15px;">
-        <h2 style="margin:0;">DELIVERY PRO</h2>
+        <h2 style="margin:0; letter-spacing: 1px;">DELIVERY PRO</h2>
+        <p style="font-size: 0.8rem; margin: 5px 0;">ניהול מערך הפצה וחלוקה</p>
     </header>
 
     <div class="stats" id="statsBar" style="display:none;">
-        <div>מרחק: <b id="totalDist">0</b></div>
-        <div>זמן חלוקה: <b id="totalTime">0</b></div>
+        <div>מרחק כולל: <b id="totalDist">0</b></div>
+        <div>זמן משוער: <b id="totalTime">0</b></div>
     </div>
 
     <div class="glass-card">
-        <p style="margin: 0 0 5px 0; font-size: 0.9rem;">ייבוא רשימת כתובות (אחת בשורה):</p>
-        <textarea id="bulkImport" placeholder="הדבק כאן כתובות מהוואטסאפ..."></textarea>
-        <div id="loadingOverlay">טוען כתובות... <span id="progressCount">0/0</span></div>
-        <button class="btn-import" id="importBtn" onclick="importFromText()">ייבא רשימה ✨</button>
+        <p style="margin: 0 0 5px 0; font-size: 0.9rem; font-weight: bold;">ייבוא רשימה (כתובת בכל שורה):</p>
+        <textarea id="bulkImport" placeholder="הדבק כאן את רשימת הכתובות מהוואטסאפ..."></textarea>
+        <div id="loadingOverlay">מעבד את הרשימה דרך השרת... <br> נא לא לסגור את הדף.</div>
+        <button class="btn-import" id="importBtn" onclick="importFromText()">ייבא רשימת כתובות ✨</button>
+        
         <hr style="opacity: 0.1; margin: 15px 0;">
+        
         <input type="text" id="addressInput" placeholder="הוספה ידנית: עיר, רחוב ומספר">
-        <input type="tel" id="phoneInput" placeholder="טלפון לקוח">
+        <input type="tel" id="phoneInput" placeholder="טלפון לקוח (אופציונלי)">
         <button class="btn-add" onclick="addLocation()">הוסף כתובת בודדת +</button>
+        
         <div id="map" style="margin-top: 15px;"></div>
         <button class="btn-opt" onclick="optimizeRoute()">סדר מסלול אופטימלי 🚀</button>
     </div>
 
     <div id="addressList"></div>
-    <center><button onclick="clearAll()" style="background:none; color:red; margin: 20px 0; font-size: 0.8rem;">איפוס הכל</button></center>
+    
+    <center>
+        <button onclick="clearAll()" style="background:none; color:red; margin: 20px 0; font-size: 0.85rem; border: 1px solid red; padding: 5px 15px;">איפוס וניקוי כל הנתונים</button>
+    </center>
 </div>
 
 <audio id="pingSound" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3"></audio>
@@ -66,58 +94,69 @@
 <script>
     var map = L.map('map').setView([32.0853, 34.7818], 10);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-    var locations = JSON.parse(localStorage.getItem('delivery_v8')) || [];
+    
+    // טעינת נתונים שנשמרו (לא נמחקים ברענון)
+    var locations = JSON.parse(localStorage.getItem('delivery_v9')) || [];
     var markers = [];
 
-    function save() { localStorage.setItem('delivery_v8', JSON.stringify(locations)); }
+    function save() { localStorage.setItem('delivery_v9', JSON.stringify(locations)); }
 
     async function importFromText() {
         const text = document.getElementById('bulkImport').value;
         const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 3);
+        
         if(lines.length === 0) return alert("לא נמצאו כתובות תקינות");
 
         const btn = document.getElementById('importBtn');
         const overlay = document.getElementById('loadingOverlay');
-        const progress = document.getElementById('progressCount');
-
+        
         btn.disabled = true;
         overlay.style.display = 'block';
-        
-        let count = 0;
-        for (let addr of lines) {
-            count++;
-            progress.innerText = `${count}/${lines.length}`;
-            try {
-                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}`);
-                const data = await res.json();
-                if (data && data.length > 0) {
-                    locations.push({
-                        name: addr, phone: '',
-                        lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon),
-                        completed: false
-                    });
-                    save(); // שמירה אחרי כל הצלחה
-                }
-                await new Promise(r => setTimeout(r, 1000)); // השהיה של שנייה שלמה למניעת חסימה
-            } catch (e) { console.error("Error: " + addr); }
-        }
 
-        document.getElementById('bulkImport').value = '';
-        overlay.style.display = 'none';
-        btn.disabled = false;
-        updateUI();
+        try {
+            const response = await fetch('/batch_import', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ addresses: lines })
+            });
+            
+            const newLocations = await response.json();
+            
+            if (newLocations && newLocations.length > 0) {
+                locations = [...locations, ...newLocations];
+                save();
+                updateUI();
+                document.getElementById('bulkImport').value = '';
+                alert(`הייבוא הושלם! נוספו ${newLocations.length} כתובות.`);
+            } else {
+                alert("השרת לא הצליח למצוא את הכתובות. וודא שהן כתובות נכון.");
+            }
+        } catch (e) {
+            alert("שגיאת תקשורת עם השרת. וודא שעדכנת את app.py ב-Render.");
+        } finally {
+            overlay.style.display = 'none';
+            btn.disabled = false;
+        }
     }
 
     async function addLocation() {
         const addr = document.getElementById('addressInput').value;
         const phone = document.getElementById('phoneInput').value;
         if(!addr) return;
+
         try {
             const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}`);
             const data = await res.json();
             if (data && data.length > 0) {
-                locations.push({ name: addr, phone: phone, lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), completed: false });
-                save(); updateUI();
+                locations.push({
+                    name: addr,
+                    phone: phone,
+                    lat: parseFloat(data[0].lat),
+                    lng: parseFloat(data[0].lon),
+                    completed: false
+                });
+                save();
+                updateUI();
                 document.getElementById('addressInput').value = '';
                 document.getElementById('phoneInput').value = '';
             }
@@ -135,11 +174,18 @@
             if (i > 0) totalM += getDistance(locations[i-1], loc) * 1.3;
             const item = document.createElement('div');
             item.className = `route-item ${loc.completed ? 'completed' : ''}`;
-            const msg = encodeURIComponent("שלום, אני השליח בדרך אליך עם המשלוח!");
-            const waUrl = `https://wa.me/972${loc.phone ? loc.phone.replace(/^0/, '') : ''}?text=${msg}`;
+            
+            const waMsg = encodeURIComponent("שלום, אני השליח בדרך אליך עם המשלוח מהחנות!");
+            const waUrl = `https://wa.me/972${loc.phone ? loc.phone.replace(/^0/, '') : ''}?text=${waMsg}`;
 
             item.innerHTML = `
-                <div class="item-header"><div><b>${i+1}. ${loc.name}</b></div><div class="v-check" onclick="toggleComplete(${i})">${loc.completed ? '✓' : ''}</div></div>
+                <div class="item-header">
+                    <div>
+                        <small>תחנה ${i+1}</small>
+                        <div style="font-weight:700; font-size:1.1rem;">${loc.name}</div>
+                    </div>
+                    <div class="v-check" onclick="toggleComplete(${i})">${loc.completed ? '✓' : ''}</div>
+                </div>
                 <div class="actions">
                     <a href="https://waze.com/ul?ll=${loc.lat},${loc.lng}&navigate=yes" target="_blank" class="action-btn waze">Waze</a>
                     <a href="https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}" target="_blank" class="action-btn gmaps">Maps</a>
@@ -162,8 +208,11 @@
 
     function toggleComplete(i) {
         locations[i].completed = !locations[i].completed;
-        if(locations[i].completed) document.getElementById('pingSound').play().catch(() => {});
-        save(); updateUI();
+        if(locations[i].completed) {
+            document.getElementById('pingSound').play().catch(() => {});
+        }
+        save();
+        updateUI();
     }
 
     function getDistance(p1, p2) {
@@ -176,13 +225,27 @@
 
     async function optimizeRoute() {
         if(locations.length < 2) return;
-        const res = await fetch('/optimize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ locations }) });
+        const res = await fetch('/optimize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ locations })
+        });
         const sorted = await res.json();
         locations = sorted.map(l => ({...l, completed: false}));
-        save(); updateUI();
+        save();
+        updateUI();
     }
 
-    function clearAll() { if(confirm("למחוק הכל?")) { locations = []; save(); updateUI(); location.reload(); } }
+    function clearAll() {
+        if(confirm("האם אתה בטוח שברצונך למחוק את כל נתוני החלוקה?")) {
+            locations = [];
+            save();
+            updateUI();
+            location.reload();
+        }
+    }
+
+    // טעינה ראשונית של התצוגה
     updateUI();
 </script>
 </body>
