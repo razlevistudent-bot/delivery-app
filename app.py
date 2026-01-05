@@ -2,7 +2,8 @@ from flask import Flask, render_template, request, jsonify
 import uuid
 
 app = Flask(__name__)
-routes_db = {} # מסד נתונים זמני בזיכרון
+# מסד נתונים זמני (חשוב: ב-Render הזיכרון מתאפס מדי פעם, בשימוש אמיתי מומלץ DB)
+routes_db = {} 
 
 @app.route('/')
 def index():
@@ -10,13 +11,23 @@ def index():
 
 @app.route('/save_route', methods=['POST'])
 def save_route():
-    route_id = str(uuid.uuid4())[:8]
-    routes_db[route_id] = {"locations": request.json.get('locations', [])}
-    return jsonify({"route_id": route_id})
+    try:
+        data = request.get_json()
+        if not data or 'locations' not in data:
+            return jsonify({"error": "No data"}), 400
+            
+        route_id = str(uuid.uuid4())[:8]
+        routes_db[route_id] = {"locations": data['locations']}
+        return jsonify({"route_id": route_id})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/get_route/<route_id>')
 def get_route(route_id):
-    return jsonify(routes_db.get(route_id, {"locations": []}))
+    route = routes_db.get(route_id)
+    if route:
+        return jsonify(route)
+    return jsonify({"error": "Route not found"}), 404
 
 @app.route('/update_status/<route_id>', methods=['POST'])
 def update_status(route_id):
