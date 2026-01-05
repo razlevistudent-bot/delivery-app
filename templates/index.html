@@ -38,7 +38,8 @@
         .actions { display: flex; gap: 8px; flex-wrap: wrap; }
         .action-btn { flex: 1; text-align: center; padding: 10px; border-radius: 10px; color: white; text-decoration: none; font-size: 0.85rem; font-weight: bold; display: flex; align-items: center; justify-content: center; }
         .waze { background: #33ccff; } .call { background: var(--success); } .whatsapp { background: var(--wa); }
-        .btn-report { background: var(--report); width: 100%; margin-top: 10px; font-size: 0.8rem; padding: 10px; }
+        
+        .btn-report { background: var(--report); width: 100%; margin-top: 10px; font-size: 0.85rem; padding: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; }
         
         .v-check { width: 40px; height: 40px; border: 2px solid var(--success); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--success); font-size: 1.3rem; flex-shrink: 0; }
         .completed .v-check { background: var(--success); color: white; }
@@ -74,14 +75,7 @@
         <label>טלפון לקוח</label>
         <div class="phone-group">
             <select id="phonePrefix">
-                <option value="050">050</option>
-                <option value="051">051</option>
-                <option value="052">052</option>
-                <option value="053">053</option>
-                <option value="054">054</option>
-                <option value="055">055</option>
-                <option value="058">058</option>
-                <option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="08">08</option><option value="09">09</option>
+                <option value="050">050</option><option value="051">051</option><option value="052">052</option><option value="053">053</option><option value="054">054</option><option value="055">055</option><option value="058">058</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="08">08</option><option value="09">09</option>
             </select>
             <input type="tel" id="phoneNumber" placeholder="7 ספרות" maxlength="7">
         </div>
@@ -95,6 +89,8 @@
     <center><button onclick="clearAll()" style="background:none; color:red; font-size: 0.8rem; border: 1px solid red; width: auto; padding: 5px 15px; margin: 20px 0;">איפוס הכל</button></center>
 </div>
 
+<input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;">
+
 <audio id="pingSound" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3"></audio>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -102,11 +98,13 @@
     var map = L.map('map').setView([32.0853, 34.7818], 10);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
     
-    var locations = JSON.parse(localStorage.getItem('delivery_v13')) || [];
+    var locations = JSON.parse(localStorage.getItem('delivery_v14')) || [];
     var markers = [];
+    var currentReportingIndex = null;
+
     document.getElementById('managerPhone').value = localStorage.getItem('manager_num') || '';
 
-    function save() { localStorage.setItem('delivery_v13', JSON.stringify(locations)); }
+    function save() { localStorage.setItem('delivery_v14', JSON.stringify(locations)); }
     function saveManager() { localStorage.setItem('manager_num', document.getElementById('managerPhone').value); }
 
     async function addNewLocation() {
@@ -133,7 +131,6 @@
                     finishTime: null
                 });
                 save(); updateUI();
-                // איפוס
                 ['addressInput','customerName','orderNum','phoneNumber'].forEach(id => document.getElementById(id).value = '');
             } else { alert("כתובת לא נמצאה"); }
         } catch (e) { alert("שגיאה בחיפוש"); }
@@ -149,10 +146,6 @@
             const item = document.createElement('div');
             item.className = `route-item ${loc.completed ? 'completed' : ''}`;
             
-            const managerNum = document.getElementById('managerPhone').value;
-            const reportMsg = encodeURIComponent(`✅ משלוח הושלם!\n📦 הזמנה: ${loc.orderId}\n👤 לקוח: ${loc.custName}\n📍 כתובת: ${loc.name}\n⏰ זמן: ${loc.finishTime || ''}`);
-            const reportUrl = `https://wa.me/972${managerNum.replace(/^0/, '')}?text=${reportMsg}`;
-
             item.innerHTML = `
                 <div class="item-header">
                     <div class="cust-info">
@@ -169,7 +162,7 @@
                     <a href="tel:${loc.phone}" class="action-btn call" ${!loc.phone ? 'style="display:none"' : ''}>חיוג</a>
                     <a href="https://wa.me/972${loc.phone ? loc.phone.replace(/^0/, '') : ''}" target="_blank" class="action-btn whatsapp" ${!loc.phone ? 'style="display:none"' : ''}>WhatsApp</a>
                 </div>
-                ${loc.completed ? `<a href="${reportUrl}" target="_blank" class="action-btn btn-report">שלח דיווח למנהל ✉️</a>` : ''}
+                ${loc.completed ? `<button onclick="triggerReport(${i})" class="btn-report">📷 צלם ודווח למנהל</button>` : ''}
             `;
             list.appendChild(item);
             markers.push(L.marker([loc.lat, loc.lng]).addTo(map));
@@ -186,6 +179,25 @@
         }
         save(); updateUI();
     }
+
+    function triggerReport(index) {
+        currentReportingIndex = index;
+        document.getElementById('cameraInput').click();
+    }
+
+    document.getElementById('cameraInput').onchange = function() {
+        if (currentReportingIndex === null) return;
+        
+        const loc = locations[currentReportingIndex];
+        const managerNum = document.getElementById('managerPhone').value;
+        if (!managerNum) return alert("נא להזין מספר מנהל בראש הדף");
+
+        const reportMsg = encodeURIComponent(`✅ משלוח הושלם בהצלחה!\n\n📦 הזמנה: ${loc.orderId}\n👤 לקוח: ${loc.custName}\n📍 כתובת: ${loc.name}\n⏰ זמן ביצוע: ${loc.finishTime}\n\n*מצורפת תמונת אישור מסירה:*`);
+        const reportUrl = `https://wa.me/972${managerNum.replace(/^0/, '')}?text=${reportMsg}`;
+        
+        window.open(reportUrl, '_blank');
+        currentReportingIndex = null;
+    };
 
     async function optimizeRoute() {
         if(locations.length < 2) return;
