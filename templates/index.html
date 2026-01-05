@@ -16,7 +16,6 @@
         label { display: block; margin-bottom: 5px; font-size: 0.8rem; font-weight: bold; }
         input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; font-family: inherit; }
         
-        /* עיצוב טלפון קידומת משמאל */
         .phone-group { display: flex; gap: 8px; direction: ltr; }
         .phone-group select { flex: 0.35; }
         .phone-group input { flex: 0.65; text-align: left; }
@@ -33,7 +32,7 @@
         .btn-call { background: #555; }
         .btn-done { background: var(--brand); color: var(--gold); }
         .btn-whatsapp { background: var(--green); width: 100%; margin-top: 10px; }
-        .btn-main { background: var(--gold); color: black; }
+        .btn-share { background: #007bff; color: white; width: 100%; margin-top: 5px; }
 
         .number-marker { background: var(--brand); color: var(--gold); border: 2px solid var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; }
         .badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; background: #eee; display: inline-block; margin-bottom: 5px; }
@@ -44,7 +43,7 @@
 <div class="container">
     <header>
         <h1>CABASSO GROUP</h1>
-        <p id="mode-text">ניהול חלוקה חכם</p>
+        <p id="mode-text">ניהול לוגיסטיקה Clight</p>
     </header>
 
     <div class="glass-card" style="background: #222; color: white;">
@@ -68,8 +67,8 @@
             <input type="tel" id="custPhone" placeholder="7 ספרות" maxlength="7">
         </div>
 
-        <button onclick="addNewLocation()" class="btn btn-main" style="width:100%; margin-bottom:5px;">הוסף לתור +</button>
-        <button onclick="shareToDriver()" class="btn" style="background:#007bff; color:white; width:100%;">שלח מסלול לנהג 📲</button>
+        <button onclick="addNewLocation()" class="btn" style="background:var(--brand); color:var(--gold); width:100%; margin-bottom:5px; border:1px solid var(--gold);">הוסף לתור +</button>
+        <button onclick="shareToDriver()" class="btn btn-share">שלח מסלול לנהג 📲</button>
     </div>
 
     <div id="map"></div>
@@ -93,9 +92,11 @@
         if (routeId) {
             document.getElementById('admin-panel').style.display = 'none';
             document.getElementById('mode-text').innerText = "מצב נהג - חלוקה מבוקרת";
-            const res = await fetch(`/get_route/${routeId}`);
-            const data = await res.json();
-            locations = data.locations || [];
+            try {
+                const res = await fetch(`/get_route/${routeId}`);
+                const data = await res.json();
+                locations = data.locations || [];
+            } catch(e) { alert("שגיאה בטעינת מסלול"); }
         } else {
             locations = JSON.parse(localStorage.getItem('cabasso_strict')) || [];
         }
@@ -147,6 +148,25 @@
         if(markers.length > 0) map.fitBounds(new L.featureGroup(markers).getBounds().pad(0.2));
     }
 
+    async function shareToDriver() {
+        if (locations.length === 0) return alert("אין כתובות לשיתוף");
+        const btn = document.querySelector('.btn-share');
+        btn.innerText = "מייצר קישור... ⏳";
+        btn.disabled = true;
+
+        try {
+            const res = await fetch('/save_route', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ locations })
+            });
+            const data = await res.json();
+            const link = window.location.origin + "/?r=" + data.route_id;
+            window.open(`https://wa.me/?text=${encodeURIComponent("הנה מסלול החלוקה המבוקר: " + link)}`, '_blank');
+        } catch(e) { alert("שגיאת תקשורת"); }
+        finally { btn.innerText = "שלח מסלול לנהג 📲"; btn.disabled = false; }
+    }
+
     async function addNewLocation() {
         const addr = document.getElementById('addressInput').value;
         const prefix = document.getElementById('phonePrefix').value;
@@ -179,17 +199,6 @@
                 body: JSON.stringify({ locations })
             });
         }
-    }
-
-    async function shareToDriver() {
-        const res = await fetch('/save_route', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ locations })
-        });
-        const data = await res.json();
-        const link = `${window.location.origin}/?r=${data.route_id}`;
-        window.open(`https://wa.me/?text=${encodeURIComponent("הנה מסלול החלוקה המבוקר: " + link)}`, '_blank');
     }
 
     function clearAll() { if(confirm("למחוק הכל?")) { locations = []; localStorage.removeItem('cabasso_strict'); updateUI(); } }
