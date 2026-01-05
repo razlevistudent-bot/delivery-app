@@ -12,9 +12,12 @@
         .container { max-width: 500px; margin: 0 auto; }
         .glass-card { background: white; border-radius: 20px; padding: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #eee; }
         
-        label { display: block; margin-bottom: 5px; font-size: 0.9rem; font-weight: bold; }
-        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 12px; font-size: 1rem; margin-bottom: 15px; box-sizing: border-box; font-family: inherit; }
+        label { display: block; margin-bottom: 5px; font-size: 0.85rem; font-weight: bold; color: #555; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 12px; font-size: 1rem; margin-bottom: 12px; box-sizing: border-box; font-family: inherit; }
         
+        .row { display: flex; gap: 10px; }
+        .row div { flex: 1; }
+
         .phone-group { display: flex; gap: 8px; }
         .phone-group select { flex: 0.4; }
         .phone-group input { flex: 1; }
@@ -23,19 +26,21 @@
         
         button { border: none; border-radius: 12px; cursor: pointer; font-weight: bold; width: 100%; padding: 15px; font-size: 1.1rem; transition: 0.2s; font-family: inherit; }
         .btn-add { background: var(--brand); color: white; margin-bottom: 10px; }
-        .btn-opt { background: var(--accent); color: white; }
+        .btn-opt { background: var(--accent); color: white; margin-bottom: 10px; }
 
         .route-item { background: white; padding: 18px; border-radius: 16px; margin-bottom: 12px; border-right: 6px solid var(--accent); box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
         .route-item.completed { border-right-color: var(--success); background: #f8fff9; }
         
-        .item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .item-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+        .cust-info { font-size: 0.95rem; color: #333; }
+        .order-tag { background: #eee; padding: 2px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; color: #666; }
+
         .actions { display: flex; gap: 8px; flex-wrap: wrap; }
-        
         .action-btn { flex: 1; text-align: center; padding: 10px; border-radius: 10px; color: white; text-decoration: none; font-size: 0.85rem; font-weight: bold; display: flex; align-items: center; justify-content: center; }
-        .waze { background: #33ccff; } .gmaps { background: #4285f4; } .call { background: var(--success); } .whatsapp { background: var(--wa); }
-        .btn-report { background: var(--report); width: 100%; margin-top: 10px; font-size: 0.8rem; padding: 8px; }
+        .waze { background: #33ccff; } .call { background: var(--success); } .whatsapp { background: var(--wa); }
+        .btn-report { background: var(--report); width: 100%; margin-top: 10px; font-size: 0.8rem; padding: 10px; }
         
-        .v-check { width: 40px; height: 40px; border: 2px solid var(--success); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--success); font-size: 1.3rem; }
+        .v-check { width: 40px; height: 40px; border: 2px solid var(--success); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--success); font-size: 1.3rem; flex-shrink: 0; }
         .completed .v-check { background: var(--success); color: white; }
     </style>
 </head>
@@ -46,12 +51,23 @@
         <h1 style="margin:0; color: var(--brand);">DELIVERY PRO</h1>
     </header>
 
-    <div class="glass-card" style="padding: 10px 20px; margin-bottom: 10px; background: #eee;">
-        <label style="font-size: 0.7rem;">מספר מנהל לדיווח (בוואטסאפ):</label>
-        <input type="tel" id="managerPhone" placeholder="למשל: 0501234567" style="margin-bottom:0; padding: 8px;" onchange="saveManager()">
+    <div class="glass-card" style="padding: 10px 20px; margin-bottom: 10px; background: #eee; border:none;">
+        <label style="font-size: 0.7rem;">מספר מנהל לדיווח (WhatsApp):</label>
+        <input type="tel" id="managerPhone" placeholder="למשל: 0501234567" style="margin-bottom:0; padding: 8px; background:white;" onchange="saveManager()">
     </div>
 
     <div class="glass-card">
+        <div class="row">
+            <div>
+                <label>שם לקוח</label>
+                <input type="text" id="customerName" placeholder="ישראל ישראלי">
+            </div>
+            <div>
+                <label>מספר הזמנה</label>
+                <input type="text" id="orderNum" placeholder="1001">
+            </div>
+        </div>
+
         <label>כתובת למשלוח</label>
         <input type="text" id="addressInput" placeholder="עיר, רחוב ומספר בית">
         
@@ -65,11 +81,7 @@
                 <option value="054">054</option>
                 <option value="055">055</option>
                 <option value="058">058</option>
-                <option value="02">02</option>
-                <option value="03">03</option>
-                <option value="04">04</option>
-                <option value="08">08</option>
-                <option value="09">09</option>
+                <option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="08">08</option><option value="09">09</option>
             </select>
             <input type="tel" id="phoneNumber" placeholder="7 ספרות" maxlength="7">
         </div>
@@ -90,17 +102,20 @@
     var map = L.map('map').setView([32.0853, 34.7818], 10);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
     
-    var locations = JSON.parse(localStorage.getItem('delivery_v12')) || [];
+    var locations = JSON.parse(localStorage.getItem('delivery_v13')) || [];
     var markers = [];
     document.getElementById('managerPhone').value = localStorage.getItem('manager_num') || '';
 
-    function save() { localStorage.setItem('delivery_v12', JSON.stringify(locations)); }
+    function save() { localStorage.setItem('delivery_v13', JSON.stringify(locations)); }
     function saveManager() { localStorage.setItem('manager_num', document.getElementById('managerPhone').value); }
 
     async function addNewLocation() {
         const addr = document.getElementById('addressInput').value;
+        const name = document.getElementById('customerName').value;
+        const order = document.getElementById('orderNum').value;
         const prefix = document.getElementById('phonePrefix').value;
         const num = document.getElementById('phoneNumber').value;
+        
         if(!addr) return alert("נא להזין כתובת");
 
         try {
@@ -109,6 +124,8 @@
             if (data && data.length > 0) {
                 locations.push({
                     name: addr,
+                    custName: name || 'לקוח ללא שם',
+                    orderId: order || '---',
                     phone: num ? prefix + num : '',
                     lat: parseFloat(data[0].lat),
                     lng: parseFloat(data[0].lon),
@@ -116,8 +133,8 @@
                     finishTime: null
                 });
                 save(); updateUI();
-                document.getElementById('addressInput').value = '';
-                document.getElementById('phoneNumber').value = '';
+                // איפוס
+                ['addressInput','customerName','orderNum','phoneNumber'].forEach(id => document.getElementById(id).value = '');
             } else { alert("כתובת לא נמצאה"); }
         } catch (e) { alert("שגיאה בחיפוש"); }
     }
@@ -132,25 +149,27 @@
             const item = document.createElement('div');
             item.className = `route-item ${loc.completed ? 'completed' : ''}`;
             
-            const waMsg = encodeURIComponent(`היי, המשלוח ל-${loc.name} הגיע!`);
-            const waUrl = `https://wa.me/972${loc.phone ? loc.phone.replace(/^0/, '') : ''}?text=${waMsg}`;
-            
-            // הודעת דיווח למנהל
             const managerNum = document.getElementById('managerPhone').value;
-            const reportMsg = encodeURIComponent(`✅ משלוח הושלם!\n📍 כתובת: ${loc.name}\n📞 לקוח: ${loc.phone}\n⏰ זמן סיום: ${loc.finishTime || ''}`);
+            const reportMsg = encodeURIComponent(`✅ משלוח הושלם!\n📦 הזמנה: ${loc.orderId}\n👤 לקוח: ${loc.custName}\n📍 כתובת: ${loc.name}\n⏰ זמן: ${loc.finishTime || ''}`);
             const reportUrl = `https://wa.me/972${managerNum.replace(/^0/, '')}?text=${reportMsg}`;
 
             item.innerHTML = `
                 <div class="item-header">
-                    <div><b>${i+1}. ${loc.name}</b></div>
+                    <div class="cust-info">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                            <span class="order-tag">#${loc.orderId}</span>
+                            <b style="font-size:1.1rem;">${loc.custName}</b>
+                        </div>
+                        <div style="color:#666; font-size:0.9rem;">${i+1}. ${loc.name}</div>
+                    </div>
                     <div class="v-check" onclick="toggle(${i})">${loc.completed ? '✓' : ''}</div>
                 </div>
                 <div class="actions">
                     <a href="https://waze.com/ul?ll=${loc.lat},${loc.lng}&navigate=yes" target="_blank" class="action-btn waze">Waze</a>
                     <a href="tel:${loc.phone}" class="action-btn call" ${!loc.phone ? 'style="display:none"' : ''}>חיוג</a>
-                    <a href="${waUrl}" target="_blank" class="action-btn whatsapp" ${!loc.phone ? 'style="display:none"' : ''}>וואטסאפ</a>
+                    <a href="https://wa.me/972${loc.phone ? loc.phone.replace(/^0/, '') : ''}" target="_blank" class="action-btn whatsapp" ${!loc.phone ? 'style="display:none"' : ''}>WhatsApp</a>
                 </div>
-                ${loc.completed ? `<a href="${reportUrl}" target="_blank" class="action-btn btn-report">שלח דיווח סיום למנהל ✉️</a>` : ''}
+                ${loc.completed ? `<a href="${reportUrl}" target="_blank" class="action-btn btn-report">שלח דיווח למנהל ✉️</a>` : ''}
             `;
             list.appendChild(item);
             markers.push(L.marker([loc.lat, loc.lng]).addTo(map));
