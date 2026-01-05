@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cabasso Group | Clight Logistics</title>
+    <title>Cabasso Group | Smart Logistics</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
@@ -24,7 +24,6 @@
             margin-bottom: 10px; box-sizing: border-box; font-family: inherit; 
         }
         
-        /* סידור טלפון: קידומת משמאל למספר */
         .phone-group { display: flex; gap: 8px; direction: ltr; }
         .phone-group select { flex: 0.35; }
         .phone-group input { flex: 0.65; text-align: left; }
@@ -46,8 +45,9 @@
         .btn-done { background: var(--brand); color: var(--gold); }
         .btn-whatsapp { background: var(--green); width: 100%; margin-top: 10px; }
         .btn-share { background: #007bff; color: white; width: 100%; margin-top: 5px; }
+        .btn-opt { background: var(--gold); color: black; margin-bottom: 10px; }
+        .btn-export { background: #6c757d; color: white; margin-top: 20px; font-size: 0.8rem; }
 
-        /* אייקון מספרים על המפה */
         .number-marker { 
             background: var(--brand); color: var(--gold); border: 2px solid var(--gold); 
             border-radius: 50%; display: flex; align-items: center; justify-content: center; 
@@ -81,7 +81,7 @@
         <div class="phone-group">
             <select id="phonePrefix">
                 <option value="050">050</option><option value="052">052</option><option value="054">054</option>
-                <option value="053">053</option><option value="058">058</option><option value="077">077</option>
+                <option value="053">053</option><option value="058">058</option>
             </select>
             <input type="tel" id="custPhone" placeholder="7 ספרות" maxlength="7">
         </div>
@@ -90,9 +90,12 @@
         <button onclick="generateShortLink()" class="btn btn-share">שתף מסלול קצר לנהג 📲</button>
     </div>
 
+    <button id="optBtn" onclick="optimizeForDriver()" class="btn btn-opt" style="display:none; width:100%;">סדר מסלול חכם (מהמיקום שלי) 🚀</button>
+
     <div id="map"></div>
     <div id="addressList"></div>
     
+    <button onclick="exportSummary()" class="btn btn-export">הורד סיכום יומי (Excel/CSV) 📊</button>
     <center><button onclick="clearAll()" style="background:none; color:red; font-size:0.7rem; border:none; margin:20px 0; cursor:pointer;">איפוס מערכת</button></center>
 </div>
 
@@ -103,7 +106,6 @@
     var locations = [];
     var markers = [];
 
-    // פונקציות דחיסה
     function encodeData(data) { return btoa(encodeURIComponent(JSON.stringify(data))); }
     function decodeData(str) { return JSON.parse(decodeURIComponent(atob(str))); }
 
@@ -113,6 +115,7 @@
         
         if (dataParam) {
             document.getElementById('admin-panel').style.display = 'none';
+            document.getElementById('optBtn').style.display = 'block';
             document.getElementById('mode-text').innerText = "מצב נהג - חלוקה מבוקרת";
             try {
                 locations = decodeData(dataParam);
@@ -140,7 +143,7 @@
                 orderId: document.getElementById('orderNum').value || '0000',
                 phone: num ? prefix + num : '',
                 lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon),
-                completed: false, reported: false
+                completed: false, reported: false, time: null
             });
             localStorage.setItem('cabasso_strict', JSON.stringify(locations));
             updateUI();
@@ -148,28 +151,22 @@
         } else { alert("כתובת לא נמצאה"); }
     }
 
-    // פונקציה לקיצור קישור ושיתוף
     async function generateShortLink() {
         if (locations.length === 0) return alert("אין כתובות ברשימה");
-        
         const btn = document.querySelector('.btn-share');
-        btn.innerText = "מייצר קישור קצר... ⏳";
+        btn.innerText = "מייצר קישור... ⏳";
         btn.disabled = true;
 
         const encoded = encodeData(locations);
         const longLink = window.location.origin + window.location.pathname + "?d=" + encoded;
 
         try {
-            // שימוש ב-API של is.gd
             const response = await fetch(`https://is.gd/create.php?format=json&url=${encodeURIComponent(longLink)}`);
             const data = await response.json();
             const finalLink = data.shorturl || longLink;
-
-            const waMsg = encodeURIComponent("שלום, זה מסלול החלוקה המבוקר של Cabasso Group: " + finalLink);
-            window.open(`https://wa.me/?text=${waMsg}`, '_blank');
+            window.open(`https://wa.me/?text=${encodeURIComponent("מסלול חלוקה Cabasso Group: " + finalLink)}`, '_blank');
         } catch (e) {
-            const waMsg = encodeURIComponent("שלום, זה מסלול החלוקה של Cabasso Group: " + longLink);
-            window.open(`https://wa.me/?text=${waMsg}`, '_blank');
+            window.open(`https://wa.me/?text=${encodeURIComponent("מסלול חלוקה: " + longLink)}`, '_blank');
         } finally {
             btn.innerText = "שתף מסלול קצר לנהג 📲";
             btn.disabled = false;
@@ -191,11 +188,11 @@
 
             item.className = `route-item ${loc.reported ? 'is-completed' : ''} ${isLocked ? 'is-locked' : ''}`;
             const managerNum = document.getElementById('managerPhone').value;
-            const reportMsg = encodeURIComponent(`💡 Cabasso Group - דיווח מסירה:\n📦 הזמנה: ${loc.orderId}\n👤 לקוח: ${loc.custName}\n📍 כתובת: ${loc.name}\n✅ בוצע בהצלחה!`);
+            const reportMsg = encodeURIComponent(`💡 Cabasso Group - דיווח:\n📦 הזמנה: ${loc.orderId}\n👤 לקוח: ${loc.custName}\n📍 כתובת: ${loc.name}\n✅ הושלם ב: ${loc.time || ''}`);
             const reportUrl = `https://wa.me/972${managerNum.replace(/^0/, '')}?text=${reportMsg}`;
 
             item.innerHTML = `
-                <span class="badge">${loc.reported ? 'בוצע ודווח' : (isLocked ? '🔒 חסום' : '🚚 התחנה הבאה')}</span>
+                <span class="badge">${loc.reported ? 'בוצע: ' + loc.time : (isLocked ? '🔒 חסום' : '🚚 התחנה הבאה')}</span>
                 <div style="font-weight:bold;">${i+1}. ${loc.custName} (#${loc.orderId})</div>
                 <div style="font-size:0.85rem; color:#666;">${loc.name}</div>
                 <div class="actions">
@@ -209,15 +206,57 @@
                     ` : ''}
                 </div>`;
             list.appendChild(item);
-            
             const icon = L.divIcon({ className: 'number-marker', html: i + 1, iconSize: [25, 25] });
             markers.push(L.marker([loc.lat, loc.lng], {icon}).addTo(map));
         });
         if(markers.length > 0) map.fitBounds(new L.featureGroup(markers).getBounds().pad(0.2));
     }
 
-    function markDone(i) { locations[i].completed = true; updateUI(); }
+    function markDone(i) { 
+        locations[i].completed = true; 
+        locations[i].time = new Date().toLocaleTimeString('he-IL', {hour: '2-digit', minute:'2-digit'});
+        updateUI(); 
+    }
     function markReported(i) { locations[i].reported = true; setTimeout(updateUI, 1000); }
+
+    function optimizeForDriver() {
+        navigator.geolocation.getCurrentPosition(pos => {
+            const uLat = pos.coords.latitude, uLng = pos.coords.longitude;
+            let unvisited = locations.filter(l => !l.reported);
+            let done = locations.filter(l => l.reported);
+            let optimized = [];
+            let cLat = uLat, cLng = uLng;
+
+            while (unvisited.length > 0) {
+                let closestIdx = 0, minDist = Infinity;
+                unvisited.forEach((loc, idx) => {
+                    let d = Math.sqrt(Math.pow(loc.lat - cLat, 2) + Math.pow(loc.lng - cLng, 2));
+                    if (d < minDist) { minDist = d; closestIdx = idx; }
+                });
+                let next = unvisited.splice(closestIdx, 1)[0];
+                optimized.push(next);
+                cLat = next.lat; cLng = next.lng;
+            }
+            locations = [...done, ...optimized];
+            updateUI();
+            alert("המסלול סודר מהקרוב לרחוק! 🚀");
+        }, () => alert("נא לאשר גישה למיקום"));
+    }
+
+    function exportSummary() {
+        let csv = "מספר הזמנה,שם לקוח,כתובת,זמן סיום\n";
+        locations.forEach(loc => {
+            csv += `${loc.orderId},${loc.custName},${loc.name},${loc.time || 'לא בוצע'}\n`;
+        });
+        const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute("download", `Cabasso_Summary_${new Date().toLocaleDateString()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
     function clearAll() { if(confirm("למחוק הכל?")) { locations = []; localStorage.removeItem('cabasso_strict'); updateUI(); } }
 </script>
 </body>
