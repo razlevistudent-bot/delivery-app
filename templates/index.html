@@ -3,27 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cabasso Group | Driver Sync</title>
+    <title>Cabasso Group | Restricted Route</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
-        :root { --brand: #1a1a1a; --gold: #c5a059; --bg: #f4f4f4; --white: #fff; --green: #27ae60; }
+        :root { --brand: #1a1a1a; --gold: #c5a059; --bg: #f4f4f4; --white: #fff; --green: #27ae60; --locked: #95a5a6; }
         body { font-family: 'Assistant', sans-serif; background: var(--bg); margin: 0; padding: 10px; direction: rtl; }
         .container { max-width: 500px; margin: 0 auto; }
-        header { text-align: center; padding: 15px; background: var(--brand); color: var(--gold); border-radius: 15px; margin-bottom: 10px; }
+        header { text-align: center; padding: 15px; background: var(--brand); color: var(--gold); border-radius: 15px; margin-bottom: 10px; border-bottom: 3px solid var(--gold); }
         .glass-card { background: var(--white); border-radius: 15px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 10px; }
-        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; }
-        #map { height: 200px; border-radius: 12px; margin-bottom: 10px; z-index: 1; }
-        button { border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; padding: 12px; transition: 0.3s; }
-        .btn-add { background: var(--brand); color: var(--gold); margin-bottom: 5px; }
-        .btn-opt { background: var(--gold); color: var(--brand); margin-bottom: 5px; }
-        .btn-share { background: #007bff; color: white; margin-bottom: 5px; }
-        .route-item { background: var(--white); padding: 15px; border-radius: 12px; margin-bottom: 10px; border-right: 5px solid var(--gold); }
-        .route-item.completed { border-right-color: var(--green); opacity: 0.6; }
+        
+        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; font-family: inherit; }
+        
+        .route-item { background: var(--white); padding: 15px; border-radius: 12px; margin-bottom: 10px; border-right: 5px solid var(--gold); position: relative; transition: 0.3s; }
+        .route-item.locked { opacity: 0.5; filter: grayscale(1); pointer-events: none; border-right-color: var(--locked); }
+        .route-item.completed { border-right-color: var(--green); background: #f0fdf4; }
+        
+        .lock-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.6); z-index: 5; border-radius: 12px; font-weight: bold; color: #555; }
+
         .actions { display: flex; gap: 5px; margin-top: 10px; }
-        .action-btn { flex: 1; text-align: center; padding: 8px; border-radius: 5px; color: white; text-decoration: none; font-size: 0.8rem; font-weight: bold; }
-        .waze { background: #33ccff; } .call { background: #555; } .whatsapp { background: var(--green); }
-        .number-icon { background: var(--brand); color: var(--gold); border: 2px solid var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .action-btn { flex: 1; text-align: center; padding: 12px; border-radius: 8px; color: white; text-decoration: none; font-size: 0.9rem; font-weight: bold; display: flex; align-items: center; justify-content: center; }
+        .waze { background: #33ccff; } 
+        .whatsapp-report { background: var(--green); box-shadow: 0 4px 10px rgba(39, 174, 96, 0.3); animation: pulse 2s infinite; }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+
+        .status-badge { font-size: 0.75rem; padding: 3px 8px; border-radius: 20px; background: #eee; margin-bottom: 5px; display: inline-block; }
     </style>
 </head>
 <body>
@@ -31,126 +40,113 @@
 <div class="container">
     <header>
         <h1>CABASSO GROUP</h1>
-        <p id="mode-text">מצב מנהל - הכנת מסלול</p>
+        <p id="mode-text">מערכת חלוקה מבוקרת</p>
     </header>
 
-    <div class="glass-card" id="admin-panel">
-        <div style="display: flex; gap: 5px;">
-            <input type="text" id="custName" placeholder="שם לקוח" style="flex:1.5">
-            <input type="text" id="orderNum" placeholder="הזמנה #" style="flex:1">
-        </div>
-        <input type="text" id="addressInput" placeholder="כתובת: עיר, רחוב ומספר">
-        <button class="btn-add" onclick="addNewLocation()">הוסף לרשימה +</button>
-        <button class="btn-share" onclick="shareRoute()">שתף מסלול עם הנהג 📲</button>
+    <div class="glass-card" style="background: #222; color: white;">
+        <label style="font-size: 0.8rem; color: #aaa;">מספר מנהל לדיווח:</label>
+        <input type="tel" id="managerPhone" placeholder="0501234567" onchange="saveManager()" style="background:#333; color:white; border:none;">
     </div>
 
-    <div id="map"></div>
-    <button class="btn-opt" onclick="optimizeFromCurrentLocation()">סדר מסלול מהמיקום שלי 🚀</button>
+    <div class="glass-card" id="admin-inputs">
+        <input type="text" id="custName" placeholder="שם לקוח">
+        <input type="text" id="addressInput" placeholder="כתובת למשלוח">
+        <button onclick="addNewLocation()" style="background:var(--brand); color:var(--gold); width:100%; padding:12px; border-radius:8px; font-weight:bold; border:1px solid var(--gold);">הוסף למסלול +</button>
+        <button onclick="shareRoute()" style="background:#007bff; color:white; width:100%; margin-top:5px; padding:12px; border-radius:8px; border:none; font-weight:bold;">שלח לנהג 📲</button>
+    </div>
 
     <div id="addressList" style="margin-top: 15px;"></div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    var map = L.map('map').setView([32.0853, 34.7818], 10);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
     var locations = [];
-    var markers = [];
+    var routeId = new URLSearchParams(window.location.search).get('r');
+    
+    // שליפת מספר מנהל
+    document.getElementById('managerPhone').value = localStorage.getItem('manager_num') || '';
+    function saveManager() { localStorage.setItem('manager_num', document.getElementById('managerPhone').value); }
 
-    // בדיקה אם הנהג נכנס דרך קישור שיתוף
     window.onload = async function() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const routeId = urlParams.get('r');
         if (routeId) {
-            document.getElementById('admin-panel').style.display = 'none';
-            document.getElementById('mode-text').innerText = "מצב נהג - חלוקה פעילה";
-            try {
-                const res = await fetch(`/get_route/${routeId}`);
-                locations = await res.json();
-                updateUI();
-            } catch (e) { alert("מסלול לא נמצא"); }
+            document.getElementById('admin-inputs').style.display = 'none';
+            // כאן תבוא פקודת fetch לשרת לקבלת הנתונים (מוחזר לפי ה-ID)
+            // לצורך הדוגמה נשתמש ב-localStorage
+            locations = JSON.parse(localStorage.getItem('cabasso_sync')) || [];
         } else {
             locations = JSON.parse(localStorage.getItem('cabasso_sync')) || [];
-            updateUI();
         }
+        updateUI();
     };
-
-    function save() { localStorage.setItem('cabasso_sync', JSON.stringify(locations)); }
-
-    async function addNewLocation() {
-        const addr = document.getElementById('addressInput').value;
-        if(!addr) return;
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}&limit=1`);
-        const data = await res.json();
-        if (data && data.length > 0) {
-            locations.push({
-                name: addr, custName: document.getElementById('custName').value || 'לקוח',
-                orderId: document.getElementById('orderNum').value || '---',
-                lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon),
-                completed: false
-            });
-            save(); updateUI();
-            document.getElementById('addressInput').value = '';
-        }
-    }
-
-    async function shareRoute() {
-        if(locations.length === 0) return alert("הרשימה ריקה");
-        const res = await fetch('/save_route', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ locations })
-        });
-        const data = await res.json();
-        const shareLink = `${window.location.origin}/?r=${data.route_id}`;
-        
-        // פתיחת וואטסאפ עם הקישור
-        window.open(`https://wa.me/?text=${encodeURIComponent("היי, זה המסלול להיום בקבוצת קבסו: " + shareLink)}`, '_blank');
-    }
 
     function updateUI() {
         const list = document.getElementById('addressList');
         list.innerHTML = '';
-        markers.forEach(m => map.removeLayer(m));
-        markers = [];
+        
+        let firstIncompleteFound = false;
 
         locations.forEach((loc, i) => {
             const item = document.createElement('div');
-            item.className = `route-item ${loc.completed ? 'completed' : ''}`;
+            
+            // לוגיקת חסימה: אם זו לא התחנה הראשונה שלא הושלמה, היא נעולה
+            let isLocked = false;
+            if (firstIncompleteFound && !loc.completed) {
+                isLocked = true;
+            }
+            if (!loc.completed) firstIncompleteFound = true;
+
+            item.className = `route-item ${loc.completed ? 'completed' : ''} ${isLocked ? 'locked' : ''}`;
+            
+            const managerNum = document.getElementById('managerPhone').value;
+            const reportMsg = encodeURIComponent(`✅ דו"ח חלוקה - קבוצת קבסו:\nהזמנה: ${loc.orderId || '---'}\nלקוח: ${loc.custName}\nבוצע בהצלחה!`);
+            const reportUrl = `https://wa.me/972${managerNum.replace(/^0/, '')}?text=${reportMsg}`;
+
             item.innerHTML = `
-                <div style="display:flex; justify-content:space-between;">
-                    <div><b>${i+1}. ${loc.custName} (#${loc.orderId})</b><br><small>${loc.name}</small></div>
-                    <div onclick="toggle(${i})" style="cursor:pointer; font-size:1.5rem;">${loc.completed ? '✅' : '⬜'}</div>
-                </div>
+                ${isLocked ? '<div class="lock-overlay">🔒 ממתין לדיווח תחנה קודמת</div>' : ''}
+                <span class="status-badge">${loc.completed ? 'הושלם ✅' : (isLocked ? 'נעול' : 'בתהליך 🚚')}</span>
+                <div style="font-weight:bold; font-size:1.1rem;">${i+1}. ${loc.custName}</div>
+                <div style="font-size:0.9rem; color:#666;">${loc.name}</div>
+                
                 <div class="actions">
-                    <a href="https://waze.com/ul?ll=${loc.lat},${loc.lng}&navigate=yes" class="action-btn waze">Waze</a>
+                    ${!loc.completed && !isLocked ? `
+                        <a href="https://waze.com/ul?ll=${loc.lat},${loc.lng}&navigate=yes" class="action-btn waze">ניווט ליעד</a>
+                        <button onclick="markDone(${i})" style="background:var(--brand); color:white; border:none; border-radius:8px; padding:0 15px; font-weight:bold;">סיימתי</button>
+                    ` : ''}
+                    
+                    ${loc.completed ? `
+                        <a href="${reportUrl}" target="_blank" class="action-btn whatsapp-report" onclick="unlockNext(${i})">שלח דיווח למנהל לשחרור המשך 🔓</a>
+                    ` : ''}
                 </div>
             `;
             list.appendChild(item);
-            const icon = L.divIcon({ className: 'number-icon', html: i + 1, iconSize: [25, 25] });
-            markers.push(L.marker([loc.lat, loc.lng], {icon}).addTo(map));
         });
-        if(markers.length > 0) map.fitBounds(new L.featureGroup(markers).getBounds().pad(0.2));
     }
 
-    function toggle(i) { locations[i].completed = !locations[i].completed; save(); updateUI(); }
+    function markDone(i) {
+        locations[i].completed = true;
+        localStorage.setItem('cabasso_sync', JSON.stringify(locations));
+        updateUI();
+        alert("החלוקה סומנה. כעת חובה ללחוץ על 'שלח דיווח למנהל' כדי להמשיך לכתובת הבאה.");
+    }
 
-    function optimizeFromCurrentLocation() {
-        navigator.geolocation.getCurrentPosition(pos => {
-            const uLat = pos.coords.latitude, uLng = pos.coords.longitude;
-            let unvisited = [...locations], optimized = [], cLat = uLat, cLng = uLng;
-            while (unvisited.length > 0) {
-                let closestIdx = 0, minDist = Infinity;
-                for (let i = 0; i < unvisited.length; i++) {
-                    let d = Math.sqrt(Math.pow(unvisited[i].lat - cLat, 2) + Math.pow(unvisited[i].lng - cLng, 2));
-                    if (d < minDist) { minDist = d; closestIdx = i; }
-                }
-                let next = unvisited.splice(closestIdx, 1)[0];
-                optimized.push(next);
-                cLat = next.lat; cLng = next.lng;
-            }
-            locations = optimized; save(); updateUI();
-        });
+    function unlockNext(i) {
+        // בחיים האמיתיים כאן נעדכן את השרת שהדיווח נשלח
+        console.log("דיווח נשלח למנהל עבור תחנה " + (i+1));
+        updateUI();
+    }
+
+    // פונקציות עזר להוספה ושיתוף (כמו קודם)
+    async function addNewLocation() {
+        const addr = document.getElementById('addressInput').value;
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}&limit=1`);
+        const data = await res.json();
+        if (data.length > 0) {
+            locations.push({
+                name: addr, custName: document.getElementById('custName').value || 'לקוח',
+                lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), completed: false
+            });
+            localStorage.setItem('cabasso_sync', JSON.stringify(locations));
+            updateUI();
+        }
     }
 </script>
 </body>
