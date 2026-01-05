@@ -15,78 +15,51 @@
             --success: #27ae60;
         }
         
-        body { 
-            font-family: 'Assistant', sans-serif; 
-            background: var(--bg-light); 
-            margin: 0; padding: 15px; 
-            direction: rtl; 
-            color: var(--cabasso-black);
-        }
-
+        body { font-family: 'Assistant', sans-serif; background: var(--bg-light); margin: 0; padding: 15px; direction: rtl; color: var(--cabasso-black); }
         .container { max-width: 500px; margin: 0 auto; }
 
         header { 
-            text-align: center; 
-            padding: 20px 0; 
-            background: var(--cabasso-black); 
-            color: var(--clight-gold); 
-            border-radius: 20px 20px 0 0;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center; padding: 20px 0; background: var(--cabasso-black); color: var(--clight-gold); 
+            border-radius: 20px 20px 0 0; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
-        
         header h1 { margin: 0; font-size: 1.8rem; letter-spacing: 2px; }
-        header p { margin: 5px 0 0; font-size: 0.9rem; color: var(--white); opacity: 0.8; }
 
-        .glass-card { 
-            background: var(--white); 
-            border-radius: 0 0 20px 20px; 
-            padding: 20px; 
-            box-shadow: 0 8px 30px rgba(0,0,0,0.05); 
-            margin-bottom: 20px; 
-        }
+        .glass-card { background: var(--white); border-radius: 0 0 20px 20px; padding: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.05); margin-bottom: 20px; }
 
         label { display: block; margin-bottom: 5px; font-size: 0.85rem; font-weight: bold; color: var(--cabasso-black); }
-        input, select { 
-            width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; 
-            font-size: 1rem; margin-bottom: 12px; box-sizing: border-box; font-family: inherit; 
-        }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; margin-bottom: 12px; box-sizing: border-box; font-family: inherit; }
 
         .phone-group { display: flex; gap: 8px; direction: ltr; }
-        .phone-group select { flex: 0.35; margin-bottom: 12px; text-align: center; }
-        .phone-group input { flex: 0.65; margin-bottom: 12px; text-align: left; }
+        .phone-group select { flex: 0.35; } .phone-group input { flex: 0.65; text-align: left; }
 
         #map { height: 250px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #ddd; z-index: 1;}
 
-        button { 
-            border: none; border-radius: 8px; cursor: pointer; font-weight: bold; 
-            width: 100%; padding: 14px; font-size: 1rem; transition: 0.3s; font-family: inherit; 
-        }
+        button { border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; padding: 14px; font-size: 1rem; transition: 0.3s; font-family: inherit; }
         .btn-add { background: var(--cabasso-black); color: var(--clight-gold); margin-bottom: 10px; border: 1px solid var(--clight-gold); }
         .btn-opt { background: var(--clight-gold); color: var(--cabasso-black); box-shadow: 0 4px 12px rgba(197, 160, 89, 0.3); }
 
-        .route-item { 
-            background: var(--white); padding: 18px; border-radius: 15px; margin-bottom: 12px; 
-            border-right: 6px solid var(--clight-gold); box-shadow: 0 4px 12px rgba(0,0,0,0.03); 
-        }
+        .route-item { background: var(--white); padding: 18px; border-radius: 15px; margin-bottom: 12px; border-right: 6px solid var(--clight-gold); box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
         .route-item.completed { border-right-color: var(--success); opacity: 0.6; }
 
         .item-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
         .order-tag { background: var(--cabasso-black); color: var(--clight-gold); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
 
         .actions { display: flex; gap: 8px; flex-wrap: wrap; }
-        .action-btn { 
-            flex: 1; text-align: center; padding: 10px; border-radius: 8px; color: var(--white); 
-            text-decoration: none; font-size: 0.85rem; font-weight: bold; display: flex; align-items: center; justify-content: center;
-        }
+        .action-btn { flex: 1; text-align: center; padding: 10px; border-radius: 8px; color: var(--white); text-decoration: none; font-size: 0.85rem; font-weight: bold; display: flex; align-items: center; justify-content: center; }
         .waze { background: #33ccff; } .call { background: #555; } .whatsapp { background: #25d366; }
-        .btn-report { background: #6c757d; width: 100%; margin-top: 10px; font-size: 0.8rem; padding: 8px; color: white; }
 
-        .v-check { 
-            width: 35px; height: 35px; border: 2px solid var(--success); border-radius: 50%; 
-            display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--success);
-        }
+        .v-check { width: 35px; height: 35px; border: 2px solid var(--success); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--success); }
         .completed .v-check { background: var(--success); color: var(--white); }
-        .dist-tag { font-size: 0.75rem; color: var(--clight-gold); font-weight: bold; margin-top: 4px; }
+        
+        .info-row { display: flex; gap: 10px; margin-top: 5px; }
+        .info-tag { font-size: 0.75rem; font-weight: bold; color: #777; background: #eee; padding: 2px 6px; border-radius: 4px; }
+        .gold-text { color: var(--clight-gold); background: #fdf5e6; }
+
+        /* עיצוב מספרים על המפה */
+        .number-icon {
+            background: var(--cabasso-black); color: var(--clight-gold); border: 2px solid var(--clight-gold);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -94,7 +67,7 @@
 <div class="container">
     <header>
         <h1>CABASSO GROUP</h1>
-        <p>CLIGHT | Premium Lighting Logistics</p>
+        <p>CLIGHT | Logistics System</p>
     </header>
 
     <div class="glass-card" style="padding: 10px 20px; margin-bottom: 0; background: #222; border-radius: 0; color:white; border:none;">
@@ -107,47 +80,37 @@
             <div style="flex:1.5"><label>שם לקוח</label><input type="text" id="customerName" placeholder="שם"></div>
             <div style="flex:1"><label>מס' הזמנה</label><input type="text" id="orderNum" placeholder="0000"></div>
         </div>
-
         <label>כתובת למשלוח</label>
         <input type="text" id="addressInput" placeholder="עיר, רחוב ומספר">
-        
         <label>טלפון לקוח</label>
         <div class="phone-group">
             <select id="phonePrefix">
-                <option value="050">050</option><option value="051">051</option><option value="052">052</option>
-                <option value="053">053</option><option value="054">054</option><option value="055">055</option>
-                <option value="058">058</option><option value="02">02</option><option value="03">03</option>
-                <option value="04">04</option><option value="08">08</option><option value="09">09</option>
+                <option value="050">050</option><option value="052">052</option><option value="054">054</option>
+                <option value="053">053</option><option value="058">058</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="08">08</option><option value="09">09</option>
             </select>
             <input type="tel" id="phoneNumber" placeholder="7 ספרות" maxlength="7">
         </div>
-
         <button class="btn-add" onclick="addNewLocation()">הוסף למסלול +</button>
         <div id="map"></div>
-        <button class="btn-opt" onclick="optimizeFromCurrentLocation()">חשב מסלול מהמיקום שלי 🚀</button>
+        <button class="btn-opt" onclick="optimizeFromCurrentLocation()">סדר מסלול מהמיקום שלי 🚀</button>
     </div>
 
     <div id="addressList"></div>
-    <center><button onclick="clearAll()" style="background:none; color:#999; font-size: 0.75rem; border: none; margin: 20px 0;">איפוס מערכת</button></center>
 </div>
 
 <audio id="pingSound" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3"></audio>
-
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     var map = L.map('map').setView([32.0853, 34.7818], 10);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-    
     var locations = JSON.parse(localStorage.getItem('cabasso_v_final')) || [];
     var markers = [];
     var userMarker = null;
 
     document.getElementById('managerPhone').value = localStorage.getItem('manager_num') || '';
-
     function save() { localStorage.setItem('cabasso_v_final', JSON.stringify(locations)); }
     function saveManager() { localStorage.setItem('manager_num', document.getElementById('managerPhone').value); }
 
-    // פונקציית מרחק במטרים
     function getPreciseDist(lat1, lon1, lat2, lon2) {
         const R = 6371; 
         const dLat = (lat2-lat1) * Math.PI/180;
@@ -163,16 +126,14 @@
         const prefix = document.getElementById('phonePrefix').value;
         const num = document.getElementById('phoneNumber').value;
         if(!addr) return alert("נא להזין כתובת");
-
         try {
             const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}&limit=1`);
             const data = await res.json();
             if (data && data.length > 0) {
                 locations.push({
                     name: addr, custName: name || 'לקוח', orderId: order || '---',
-                    phone: num ? prefix + num : '',
-                    lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon),
-                    completed: false, finishTime: null, distFromPrev: 0
+                    phone: num ? prefix + num : '', lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon),
+                    completed: false, finishTime: null, distFromPrev: 0, timeFromPrev: 0
                 });
                 save(); updateUI();
                 ['addressInput','customerName','orderNum','phoneNumber'].forEach(id => document.getElementById(id).value = '');
@@ -189,12 +150,9 @@
         locations.forEach((loc, i) => {
             const item = document.createElement('div');
             item.className = `route-item ${loc.completed ? 'completed' : ''}`;
-            
             const managerNum = document.getElementById('managerPhone').value;
             const reportMsg = encodeURIComponent(`💡 Cabasso Group - דיווח:\n📦 הזמנה: ${loc.orderId}\n👤 לקוח: ${loc.custName}\n📍 כתובת: ${loc.name}\n⏰ זמן: ${loc.finishTime || ''}`);
             const reportUrl = `https://wa.me/972${managerNum.replace(/^0/, '')}?text=${reportMsg}`;
-
-            const distInfo = loc.distFromPrev > 0 ? `<div class="dist-tag">📍 כ-${loc.distFromPrev.toFixed(1)} ק"מ מהנקודה הקודמת</div>` : '';
 
             item.innerHTML = `
                 <div class="item-header">
@@ -204,7 +162,10 @@
                             <b style="font-size:1.1rem;">${loc.custName}</b>
                         </div>
                         <div style="color:#666; font-size:0.9rem;">${i+1}. ${loc.name}</div>
-                        ${distInfo}
+                        <div class="info-row">
+                            ${loc.distFromPrev > 0 ? `<span class="info-tag gold-text">📍 ${loc.distFromPrev.toFixed(1)} ק"מ</span>` : ''}
+                            ${loc.timeFromPrev > 0 ? `<span class="info-tag">🕒 כ-${Math.round(loc.timeFromPrev)} דק' נסיעה</span>` : ''}
+                        </div>
                     </div>
                     <div class="v-check" onclick="toggle(${i})">${loc.completed ? '✓' : ''}</div>
                 </div>
@@ -215,7 +176,14 @@
                 </div>
             `;
             list.appendChild(item);
-            markers.push(L.marker([loc.lat, loc.lng]).addTo(map));
+            
+            // יצירת אייקון עם מספר
+            const icon = L.divIcon({
+                className: 'number-icon',
+                html: i + 1,
+                iconSize: [25, 25]
+            });
+            markers.push(L.marker([loc.lat, loc.lng], {icon: icon}).addTo(map));
         });
         if(markers.length > 0) map.fitBounds(new L.featureGroup(markers).getBounds().pad(0.2));
     }
@@ -230,51 +198,28 @@
         save(); updateUI();
     }
 
-    async function optimizeFromCurrentLocation() {
+    function optimizeFromCurrentLocation() {
         if (locations.length < 1) return alert("אין כתובות לסידור");
-
-        if (!navigator.geolocation) return alert("זיהוי מיקום לא נתמך במכשיר זה");
-
         navigator.geolocation.getCurrentPosition(async (position) => {
-            const uLat = position.coords.latitude;
-            const uLng = position.coords.longitude;
-
-            // עדכון המפה עם המיקום שלך
-            if(userMarker) map.removeLayer(userMarker);
-            userMarker = L.circleMarker([uLat, uLng], {color: '#33ccff', radius: 10, fillOpacity: 0.8}).addTo(map).bindPopup("אתה כאן").openPopup();
-
-            let unvisited = [...locations];
-            let optimized = [];
-            let currLat = uLat;
-            let currLng = uLng;
+            const uLat = position.coords.latitude; const uLng = position.coords.longitude;
+            let unvisited = [...locations]; let optimized = [];
+            let currLat = uLat; let currLng = uLng;
 
             while (unvisited.length > 0) {
-                let closestIdx = 0;
-                let minDist = Infinity;
-
+                let closestIdx = 0; let minDist = Infinity;
                 for (let i = 0; i < unvisited.length; i++) {
                     let d = getPreciseDist(currLat, currLng, unvisited[i].lat, unvisited[i].lng);
-                    if (d < minDist) {
-                        minDist = d;
-                        closestIdx = i;
-                    }
+                    if (d < minDist) { minDist = d; closestIdx = i; }
                 }
-
                 let nextStop = unvisited.splice(closestIdx, 1)[0];
                 nextStop.distFromPrev = minDist;
+                nextStop.timeFromPrev = (minDist / 40) * 60 + 2; // חישוב דקות נסיעה + 2 דק' ממוצע לרמזורים
                 optimized.push(nextStop);
-                currLat = nextStop.lat;
-                currLng = nextStop.lng;
+                currLat = nextStop.lat; currLng = nextStop.lng;
             }
-
-            locations = optimized;
-            save();
-            updateUI();
-            alert("המסלול סודר מהנקודה הקרובה ביותר אליך! 🚀");
-        }, () => alert("נא לאשר גישה למיקום (GPS) בהגדרות הדפדפן"));
+            locations = optimized; save(); updateUI();
+        }, () => alert("נא לאשר גישה למיקום"));
     }
-
-    function clearAll() { if(confirm("לאפס הכל?")) { locations = []; save(); updateUI(); } }
     updateUI();
 </script>
 </body>
