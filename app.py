@@ -1,11 +1,8 @@
 from flask import Flask, render_template, request, jsonify
-import math
 import uuid
 
 app = Flask(__name__)
-
-# מסד נתונים זמני בזיכרון השרת (בשימוש מקצועי כדאי להשתמש ב-Redis או DB)
-routes_db = {}
+routes_db = {} # מסד נתונים זמני בזיכרון
 
 @app.route('/')
 def index():
@@ -13,23 +10,20 @@ def index():
 
 @app.route('/save_route', methods=['POST'])
 def save_route():
-    route_id = str(uuid.uuid4())[:8] # יצירת קוד קצר
-    routes_db[route_id] = request.json.get('locations', [])
+    route_id = str(uuid.uuid4())[:8]
+    routes_db[route_id] = {"locations": request.json.get('locations', [])}
     return jsonify({"route_id": route_id})
 
 @app.route('/get_route/<route_id>')
 def get_route(route_id):
-    route = routes_db.get(route_id)
-    if route:
-        return jsonify(route)
-    return jsonify({"error": "Route not found"}), 404
+    return jsonify(routes_db.get(route_id, {"locations": []}))
 
-@app.route('/optimize', methods=['POST'])
-def optimize():
-    # חישוב אופטימיזציה פשוט
-    data = request.json
-    locations = data.get('locations', [])
-    return jsonify(locations)
+@app.route('/update_status/<route_id>', methods=['POST'])
+def update_status(route_id):
+    if route_id in routes_db:
+        routes_db[route_id]["locations"] = request.json.get('locations')
+        return jsonify({"status": "updated"})
+    return jsonify({"error": "not found"}), 404
 
 if __name__ == '__main__':
     app.run(debug=True)
