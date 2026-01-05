@@ -3,36 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cabasso Group | Restricted Route</title>
+    <title>Cabasso Group | Restricted Logistics</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
-        :root { --brand: #1a1a1a; --gold: #c5a059; --bg: #f4f4f4; --white: #fff; --green: #27ae60; --locked: #95a5a6; }
+        :root { --brand: #1a1a1a; --gold: #c5a059; --bg: #f4f4f4; --white: #fff; --green: #27ae60; --locked: #bdc3c7; }
         body { font-family: 'Assistant', sans-serif; background: var(--bg); margin: 0; padding: 10px; direction: rtl; }
         .container { max-width: 500px; margin: 0 auto; }
         header { text-align: center; padding: 15px; background: var(--brand); color: var(--gold); border-radius: 15px; margin-bottom: 10px; border-bottom: 3px solid var(--gold); }
         .glass-card { background: var(--white); border-radius: 15px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 10px; }
         
-        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; font-family: inherit; }
+        input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; }
         
-        .route-item { background: var(--white); padding: 15px; border-radius: 12px; margin-bottom: 10px; border-right: 5px solid var(--gold); position: relative; transition: 0.3s; }
-        .route-item.locked { opacity: 0.5; filter: grayscale(1); pointer-events: none; border-right-color: var(--locked); }
-        .route-item.completed { border-right-color: var(--green); background: #f0fdf4; }
+        .route-item { background: var(--white); padding: 15px; border-radius: 12px; margin-bottom: 10px; border-right: 5px solid var(--gold); position: relative; }
         
-        .lock-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.6); z-index: 5; border-radius: 12px; font-weight: bold; color: #555; }
+        /* עיצוב תחנה חסומה */
+        .route-item.is-locked { opacity: 0.4; filter: grayscale(1); pointer-events: none; border-right-color: var(--locked); }
+        .route-item.is-locked::after { content: "🔒 חסום - בצע דיווח קודם"; position: absolute; top: 10px; left: 10px; font-size: 0.7rem; color: red; font-weight: bold; }
 
-        .actions { display: flex; gap: 5px; margin-top: 10px; }
-        .action-btn { flex: 1; text-align: center; padding: 12px; border-radius: 8px; color: white; text-decoration: none; font-size: 0.9rem; font-weight: bold; display: flex; align-items: center; justify-content: center; }
-        .waze { background: #33ccff; } 
-        .whatsapp-report { background: var(--green); box-shadow: 0 4px 10px rgba(39, 174, 96, 0.3); animation: pulse 2s infinite; }
+        .route-item.is-completed { border-right-color: var(--green); background: #f0fdf4; }
         
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.02); }
-            100% { transform: scale(1); }
-        }
-
-        .status-badge { font-size: 0.75rem; padding: 3px 8px; border-radius: 20px; background: #eee; margin-bottom: 5px; display: inline-block; }
+        .actions { display: flex; gap: 8px; margin-top: 10px; }
+        .btn { flex: 1; text-align: center; padding: 12px; border-radius: 8px; color: white; text-decoration: none; font-size: 0.9rem; font-weight: bold; border: none; cursor: pointer; }
+        .btn-waze { background: #33ccff; } 
+        .btn-done { background: var(--brand); color: var(--gold); }
+        .btn-whatsapp { background: var(--green); box-shadow: 0 4px 10px rgba(39,174,96,0.3); width: 100%; display: block; margin-top: 10px; }
+        
+        .badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; background: #eee; display: inline-block; margin-bottom: 5px; }
     </style>
 </head>
 <body>
@@ -40,80 +37,76 @@
 <div class="container">
     <header>
         <h1>CABASSO GROUP</h1>
-        <p id="mode-text">מערכת חלוקה מבוקרת</p>
+        <p>ניהול חלוקה מבוקר - Clight</p>
     </header>
 
     <div class="glass-card" style="background: #222; color: white;">
-        <label style="font-size: 0.8rem; color: #aaa;">מספר מנהל לדיווח:</label>
+        <label style="font-size: 0.7rem; color: #aaa;">מספר מנהל לדיווח:</label>
         <input type="tel" id="managerPhone" placeholder="0501234567" onchange="saveManager()" style="background:#333; color:white; border:none;">
     </div>
 
-    <div class="glass-card" id="admin-inputs">
-        <input type="text" id="custName" placeholder="שם לקוח">
-        <input type="text" id="addressInput" placeholder="כתובת למשלוח">
-        <button onclick="addNewLocation()" style="background:var(--brand); color:var(--gold); width:100%; padding:12px; border-radius:8px; font-weight:bold; border:1px solid var(--gold);">הוסף למסלול +</button>
-        <button onclick="shareRoute()" style="background:#007bff; color:white; width:100%; margin-top:5px; padding:12px; border-radius:8px; border:none; font-weight:bold;">שלח לנהג 📲</button>
-    </div>
+    <button onclick="optimizeFromCurrentLocation()" style="background:var(--gold); color:black; width:100%; padding:12px; border-radius:12px; font-weight:bold; margin-bottom:10px; border:none;">סדר מסלול לפי המיקום שלי 🚀</button>
 
-    <div id="addressList" style="margin-top: 15px;"></div>
+    <div id="addressList"></div>
+    
+    <div class="glass-card" id="adminPanel" style="margin-top:20px; border-top: 2px solid #ddd;">
+        <h3 style="margin-top:0;">הוספת כתובת (מנהל)</h3>
+        <input type="text" id="custName" placeholder="שם לקוח">
+        <input type="text" id="addressInput" placeholder="עיר, רחוב ומספר">
+        <button onclick="addNewLocation()" style="background:var(--brand); color:var(--gold); width:100%; padding:10px; border-radius:8px; border:1px solid var(--gold);">הוסף לתור +</button>
+    </div>
+    
+    <center><button onclick="clearAll()" style="background:none; color:red; font-size:0.7rem; border:none; margin-top:20px; cursor:pointer;">איפוס כל הנתונים</button></center>
 </div>
 
 <script>
-    var locations = [];
-    var routeId = new URLSearchParams(window.location.search).get('r');
+    var locations = JSON.parse(localStorage.getItem('cabasso_strict_v1')) || [];
     
-    // שליפת מספר מנהל
     document.getElementById('managerPhone').value = localStorage.getItem('manager_num') || '';
     function saveManager() { localStorage.setItem('manager_num', document.getElementById('managerPhone').value); }
 
-    window.onload = async function() {
-        if (routeId) {
-            document.getElementById('admin-inputs').style.display = 'none';
-            // כאן תבוא פקודת fetch לשרת לקבלת הנתונים (מוחזר לפי ה-ID)
-            // לצורך הדוגמה נשתמש ב-localStorage
-            locations = JSON.parse(localStorage.getItem('cabasso_sync')) || [];
-        } else {
-            locations = JSON.parse(localStorage.getItem('cabasso_sync')) || [];
-        }
-        updateUI();
-    };
+    function save() { localStorage.setItem('cabasso_strict_v1', JSON.stringify(locations)); }
 
     function updateUI() {
         const list = document.getElementById('addressList');
         list.innerHTML = '';
         
-        let firstIncompleteFound = false;
+        let foundActive = false; // האם מצאנו את התחנה הפעילה כרגע
 
         locations.forEach((loc, i) => {
             const item = document.createElement('div');
             
-            // לוגיקת חסימה: אם זו לא התחנה הראשונה שלא הושלמה, היא נעולה
+            // תנאי חסימה:
+            // תחנה חסומה אם היא לא הושלמה ודווחה, ויש תחנה לפניה שהיא עדיין פעילה.
             let isLocked = false;
-            if (firstIncompleteFound && !loc.completed) {
+            if (foundActive) {
                 isLocked = true;
             }
-            if (!loc.completed) firstIncompleteFound = true;
 
-            item.className = `route-item ${loc.completed ? 'completed' : ''} ${isLocked ? 'locked' : ''}`;
+            // אם התחנה הנוכחית לא דווחה (reported), היא הופכת להיות ה"פעילה", וכל הבאות אחריה יהיו חסומות
+            if (!loc.reported) {
+                foundActive = true;
+            }
+
+            item.className = `route-item ${loc.reported ? 'is-completed' : ''} ${isLocked ? 'is-locked' : ''}`;
             
             const managerNum = document.getElementById('managerPhone').value;
-            const reportMsg = encodeURIComponent(`✅ דו"ח חלוקה - קבוצת קבסו:\nהזמנה: ${loc.orderId || '---'}\nלקוח: ${loc.custName}\nבוצע בהצלחה!`);
+            const reportMsg = encodeURIComponent(`✅ דיווח חלוקה - Cabasso Group:\nלקוח: ${loc.custName}\nכתובת: ${loc.name}\nהסתיים בהצלחה!`);
             const reportUrl = `https://wa.me/972${managerNum.replace(/^0/, '')}?text=${reportMsg}`;
 
             item.innerHTML = `
-                ${isLocked ? '<div class="lock-overlay">🔒 ממתין לדיווח תחנה קודמת</div>' : ''}
-                <span class="status-badge">${loc.completed ? 'הושלם ✅' : (isLocked ? 'נעול' : 'בתהליך 🚚')}</span>
-                <div style="font-weight:bold; font-size:1.1rem;">${i+1}. ${loc.custName}</div>
-                <div style="font-size:0.9rem; color:#666;">${loc.name}</div>
+                <span class="badge">${loc.reported ? 'בוצע ודווח' : (isLocked ? 'ממתין לתחנה קודמת' : 'בטיפול כעת')}</span>
+                <div style="font-weight:bold;">${i+1}. ${loc.custName}</div>
+                <div style="font-size:0.85rem; color:#666;">${loc.name}</div>
                 
                 <div class="actions">
                     ${!loc.completed && !isLocked ? `
-                        <a href="https://waze.com/ul?ll=${loc.lat},${loc.lng}&navigate=yes" class="action-btn waze">ניווט ליעד</a>
-                        <button onclick="markDone(${i})" style="background:var(--brand); color:white; border:none; border-radius:8px; padding:0 15px; font-weight:bold;">סיימתי</button>
+                        <a href="https://waze.com/ul?ll=${loc.lat},${loc.lng}&navigate=yes" class="btn btn-waze">ניווט Waze</a>
+                        <button onclick="markDone(${i})" class="btn btn-done">סיימתי חלוקה</button>
                     ` : ''}
                     
-                    ${loc.completed ? `
-                        <a href="${reportUrl}" target="_blank" class="action-btn whatsapp-report" onclick="unlockNext(${i})">שלח דיווח למנהל לשחרור המשך 🔓</a>
+                    ${loc.completed && !loc.reported ? `
+                        <a href="${reportUrl}" target="_blank" class="btn btn-whatsapp" onclick="markReported(${i})">שלח דיווח למנהל (חובה לשחרור הבא)</a>
                     ` : ''}
                 </div>
             `;
@@ -121,33 +114,66 @@
         });
     }
 
+    // שלב 1: הנהג סיים את החלוקה פיזית
     function markDone(i) {
         locations[i].completed = true;
-        localStorage.setItem('cabasso_sync', JSON.stringify(locations));
+        save();
         updateUI();
-        alert("החלוקה סומנה. כעת חובה ללחוץ על 'שלח דיווח למנהל' כדי להמשיך לכתובת הבאה.");
+        alert("החלוקה הסתיימה. כעת חובה לדווח למנהל בוואטסאפ כדי לפתוח את התחנה הבאה.");
     }
 
-    function unlockNext(i) {
-        // בחיים האמיתיים כאן נעדכן את השרת שהדיווח נשלח
-        console.log("דיווח נשלח למנהל עבור תחנה " + (i+1));
-        updateUI();
+    // שלב 2: הנהג דיווח בוואטסאפ
+    function markReported(i) {
+        locations[i].reported = true;
+        save();
+        // השהיה קלה כדי לתת לוואטסאפ להיפתח
+        setTimeout(updateUI, 1000);
     }
 
-    // פונקציות עזר להוספה ושיתוף (כמו קודם)
     async function addNewLocation() {
         const addr = document.getElementById('addressInput').value;
+        const name = document.getElementById('custName').value;
+        if(!addr) return;
         const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}&limit=1`);
         const data = await res.json();
         if (data.length > 0) {
             locations.push({
-                name: addr, custName: document.getElementById('custName').value || 'לקוח',
-                lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), completed: false
+                name: addr, custName: name || 'לקוח',
+                lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon),
+                completed: false, reported: false
             });
-            localStorage.setItem('cabasso_sync', JSON.stringify(locations));
-            updateUI();
+            save(); updateUI();
+            document.getElementById('addressInput').value = '';
+            document.getElementById('custName').value = '';
         }
     }
+
+    function optimizeFromCurrentLocation() {
+        navigator.geolocation.getCurrentPosition(pos => {
+            const uLat = pos.coords.latitude, uLng = pos.coords.longitude;
+            let unvisited = [...locations.filter(l => !l.reported)];
+            let done = [...locations.filter(l => l.reported)];
+            let optimized = [];
+            let cLat = uLat, cLng = uLng;
+            
+            while (unvisited.length > 0) {
+                let closestIdx = 0, minDist = Infinity;
+                for (let i = 0; i < unvisited.length; i++) {
+                    let d = Math.sqrt(Math.pow(unvisited[i].lat - cLat, 2) + Math.pow(unvisited[i].lng - cLng, 2));
+                    if (d < minDist) { minDist = d; closestIdx = i; }
+                }
+                let next = unvisited.splice(closestIdx, 1)[0];
+                optimized.push(next);
+                cLat = next.lat; cLng = next.lng;
+            }
+            locations = [...done, ...optimized];
+            save(); updateUI();
+        });
+    }
+
+    function clearAll() { if(confirm("למחוק הכל?")) { locations = []; save(); updateUI(); } }
+    
+    updateUI();
 </script>
 </body>
 </html>
