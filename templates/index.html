@@ -17,7 +17,7 @@
         
         header { text-align: center; padding: 20px; background: linear-gradient(135deg, var(--brand) 0%, #333 100%); color: var(--gold); border-radius: 16px; margin-bottom: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         
-        /* סטריפ סיכום זמן למנהל */
+        /* סטריפ סיכום זמן */
         .admin-stats-bar { 
             background: #2c3e50; color: white; padding: 15px; border-radius: 12px; 
             margin-bottom: 20px; text-align: center; font-size: 0.9rem; 
@@ -39,10 +39,7 @@
         #map { height: 220px; border-radius: 16px; margin-bottom: 15px; z-index: 1; border: 2px solid white; }
         
         .route-item { background: var(--white); padding: 18px; border-radius: 14px; margin-bottom: 12px; border-right: 5px solid var(--gold); position: relative; transition: 0.3s; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        
-        /* חסימה רק לנהג */
-        .route-item.driver-locked { opacity: 0.5; filter: grayscale(1); pointer-events: none; border-right-color: var(--locked); background: #f9f9f9; }
-        
+        .route-item.is-locked { opacity: 0.5; filter: grayscale(1); pointer-events: none; border-right-color: var(--locked); background: #f9f9f9; }
         .route-item.is-completed { border-right-color: var(--green); background: #f0fff4; opacity: 0.8; }
         .route-item.is-skipped { border-right-color: var(--red); background: #fff5f5; opacity: 0.8; }
 
@@ -66,8 +63,10 @@
         .edit-tools { display: none; gap: 8px; margin-top: 10px; }
         
         .suggestions-box { position: absolute; background: white; border: 1px solid #ddd; width: calc(100% - 40px); z-index: 1000; max-height: 250px; overflow-y: auto; border-radius: 0 0 10px 10px; display: none; }
-        .suggestion-item { padding: 12px; border-bottom: 1px solid #f0f0f0; cursor: pointer; }
+        .suggestion-item { padding: 12px; border-bottom: 1px solid #f0f0f0; cursor: pointer; display: flex; justify-content: space-between; }
         .suggestion-item:hover { background: #fdf5e6; }
+        .addr-main { font-weight: bold; color: #333; }
+        .addr-sub { font-size: 0.8rem; color: #777; }
 
         .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); align-items: center; justify-content: center; backdrop-filter: blur(5px); }
         .modal-content { background: white; padding: 25px; border-radius: 20px; width: 90%; max-width: 400px; text-align: center; position: relative; }
@@ -79,6 +78,7 @@
         .number-marker { background: var(--brand); color: var(--gold); border: 2px solid var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; }
         .badge { font-size: 0.7rem; padding: 4px 10px; border-radius: 20px; background: #eee; display: inline-block; margin-bottom: 8px; font-weight: bold; }
         .badge.active { background: var(--gold); color: black; }
+        .eta-badge { font-size: 0.85rem; color: #555; background: #eef; padding: 3px 8px; border-radius: 5px; margin-top: 5px; display: inline-block; font-weight: bold; }
         .drag-handle { float: left; color: #ccc; cursor: grab; padding: 0 10px; font-size: 1.2rem; }
 
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.8; } 100% { opacity: 1; } }
@@ -133,7 +133,7 @@
             <div style="flex:1"><label>הזמנה #</label><input type="text" id="orderNum" placeholder="1001"></div>
         </div>
         <div style="position: relative;">
-            <label>כתובת</label>
+            <label>כתובת (למשל: לח"י 29 בני ברק)</label>
             <input type="text" id="addressInput" placeholder="הקלד כתובת..." oninput="debounceSearch()" autocomplete="off">
             <div id="suggestions" class="suggestions-box"></div>
         </div>
@@ -187,7 +187,7 @@
     var sortableInstance = null;
     var topSuggestion = null;
     var customers = JSON.parse(localStorage.getItem('cabasso_customers')) || {};
-    var isDriverMode = false; // משתנה גלובלי לזיהוי מצב
+    var isDriverMode = false;
 
     const canvas = document.getElementById('signature-pad');
     const ctx = canvas.getContext('2d');
@@ -200,24 +200,24 @@
     window.onload = function() {
         const dataParam = new URLSearchParams(window.location.search).get('d');
         if (dataParam) {
-            // --- מצב נהג ---
             isDriverMode = true;
             document.getElementById('admin-panel').style.display = 'none';
-            document.getElementById('adminStats').style.display = 'none'; 
+            document.getElementById('adminStats').style.display = 'flex'; // להציג סטריפ גם לנהג
             document.getElementById('mode-text').innerText = "נהג - מסלול קבוע";
             try { locations = JSON.parse(decodeURIComponent(atob(dataParam))); } catch(e){}
             
             if (!sessionStorage.getItem('shiftStarted')) {
                 document.getElementById('startShiftModal').style.display = 'flex';
+            } else {
+                calculateStatsFromLocation();
             }
         } else {
-            // --- מצב מנהל ---
             isDriverMode = false;
-            document.getElementById('adminStats').style.display = 'grid'; // הצגת הסטריפ
+            document.getElementById('adminStats').style.display = 'grid';
             locations = JSON.parse(localStorage.getItem('cabasso_pro')) || [];
             initSortable();
             loadCustomerDatalist();
-            updateAdminStats(); // חישוב ראשוני
+            calculateStatsFromLocation();
         }
         document.getElementById('managerPhone').value = localStorage.getItem('manager_num') || '';
         document.getElementById('managerEmail').value = localStorage.getItem('manager_email') || '';
@@ -231,34 +231,106 @@
     function save() { localStorage.setItem('cabasso_pro', JSON.stringify(locations)); }
     function saveManager() { localStorage.setItem('manager_num', document.getElementById('managerPhone').value); }
 
-    // --- חישוב סטטיסטיקות למנהל (נסיעה + פריקה) ---
-    function updateAdminStats() {
-        if(locations.length === 0) {
-            document.getElementById('statCount').innerText = "0";
-            document.getElementById('statDrive').innerText = "0 דק'";
-            document.getElementById('statUnload').innerText = "0 דק'";
-            document.getElementById('statTotal').innerText = "00:00";
+    // --- לוגיקה מתוקנת לחיפוש כתובות + כפיית טקסט ב-Waze ---
+    let debounceTimer;
+    function debounceSearch() { clearTimeout(debounceTimer); debounceTimer = setTimeout(searchAddress, 300); }
+    
+    async function searchAddress() {
+        const query = document.getElementById('addressInput').value;
+        const box = document.getElementById('suggestions');
+        if (query.length < 3) { box.style.display = 'none'; return; }
+        
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1&countrycodes=il`);
+            const data = await res.json();
+            box.innerHTML = '';
+            
+            if (data.length > 0) {
+                topSuggestion = data[0]; 
+                box.style.display = 'block';
+                data.forEach((item, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'suggestion-item';
+                    const addr = item.address;
+                    
+                    let street = addr.road || addr.street || addr.pedestrian || query;
+                    let city = addr.city || addr.town || addr.village || '';
+                    
+                    const userNumMatch = query.match(/\d+/);
+                    const apiHasNum = addr.house_number;
+                    
+                    let displayName = street;
+                    if (!apiHasNum && userNumMatch) {
+                        displayName += " " + userNumMatch[0];
+                    } else if (apiHasNum) {
+                        displayName += " " + apiHasNum;
+                    }
+
+                    div.innerHTML = `<div class="addr-main">${displayName}</div><div class="addr-sub">${city}</div>`;
+                    
+                    div.onclick = () => selectAddress(item, displayName);
+                    box.appendChild(div);
+                });
+            } else { box.style.display = 'none'; topSuggestion = null; }
+        } catch (e) {}
+    }
+
+    function selectAddress(item, forcedName = null) {
+        const input = document.getElementById('addressInput');
+        const box = document.getElementById('suggestions');
+        
+        if (forcedName) {
+            input.value = forcedName + ", " + (item.address.city || item.address.town || '');
+        } else {
+            const currentVal = input.value;
+            const userNum = currentVal.match(/\d+$/);
+            let finalName = item.address.road || item.address.street || currentVal;
+            if (!item.address.house_number && userNum) finalName += " " + userNum[0];
+            else if (item.address.house_number) finalName += " " + item.address.house_number;
+            input.value = finalName + ", " + (item.address.city || '');
+        }
+
+        input.dataset.lat = item.lat;
+        input.dataset.lng = item.lon;
+        box.style.display = 'none';
+        document.getElementById('custPhone').focus();
+    }
+
+    // --- חישוב סטטיסטיקות ---
+    function calculateStatsFromLocation() {
+        if (!navigator.geolocation) {
+            document.getElementById('statTotal').innerText = "ממתין למיקום...";
             return;
         }
         
-        let totalDriveMinutes = 0;
-        let totalUnloadMinutes = locations.length * 15; // 15 דקות פריקה לכל נקודה
-        
-        // חישוב מרחק אווירי (לצורך הערכה מהירה)
-        for (let i = 0; i < locations.length - 1; i++) {
-            const dist = getDistance(locations[i].lat, locations[i].lng, locations[i+1].lat, locations[i+1].lng);
-            // מהירות ממוצעת משוערת 30 קמ"ש בעיר + מקדם
-            totalDriveMinutes += (dist / 30) * 60 * 1.2; 
-        }
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+            let prevLat = pos.coords.latitude;
+            let prevLng = pos.coords.longitude;
+            let totalDriveMinutes = 0;
+            
+            let activeLocations = isDriverMode ? locations.filter(l => !l.completed && !l.skipped) : locations;
+            let totalUnloadMinutes = activeLocations.length * 15; 
 
-        const totalMinutes = Math.round(totalDriveMinutes + totalUnloadMinutes);
-        const hours = Math.floor(totalMinutes / 60);
-        const mins = totalMinutes % 60;
+            for (let i = 0; i < activeLocations.length; i++) {
+                const dist = getDistance(prevLat, prevLng, activeLocations[i].lat, activeLocations[i].lng);
+                totalDriveMinutes += (dist / 30) * 60 * 1.2; 
+                prevLat = activeLocations[i].lat;
+                prevLng = activeLocations[i].lng;
+            }
 
-        document.getElementById('statCount').innerText = locations.length;
-        document.getElementById('statDrive').innerText = Math.round(totalDriveMinutes) + " דק'";
-        document.getElementById('statUnload').innerText = totalUnloadMinutes + " דק'";
-        document.getElementById('statTotal').innerText = `${hours} ש' ${mins} דק'`;
+            const totalMinutes = Math.round(totalDriveMinutes + totalUnloadMinutes);
+            const hours = Math.floor(totalMinutes / 60);
+            const mins = totalMinutes % 60;
+            
+            let endTime = new Date();
+            endTime.setMinutes(endTime.getMinutes() + totalMinutes);
+
+            document.getElementById('statCount').innerText = activeLocations.length;
+            document.getElementById('statDrive').innerText = Math.round(totalDriveMinutes) + " דק'";
+            document.getElementById('statUnload').innerText = totalUnloadMinutes + " דק'";
+            document.getElementById('statTotal').innerText = `${endTime.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} (${hours}ש ${mins}ד)`;
+
+        }, (err) => { document.getElementById('statTotal').innerText = "אין גישת מיקום"; });
     }
 
     function getDistance(lat1, lon1, lat2, lon2) {
@@ -269,82 +341,38 @@
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
-    // --- אופטימיזציה חכמה למנהל (Nearest Neighbor) ---
+    // --- שאר הפונקציות ---
     function optimizeRouteForAdmin() {
-        if (locations.length < 2) return alert("צריך לפחות 2 נקודות לסידור");
-        
-        // שומרים את הנקודה הראשונה כנקודת מוצא (מחסן/יציאה)
+        if (locations.length < 2) return alert("נדרשות לפחות 2 נקודות");
         let optimized = [locations[0]];
         let unvisited = locations.slice(1);
-        
         while (unvisited.length > 0) {
             let lastLoc = optimized[optimized.length - 1];
             let closestIdx = 0;
             let minDistance = Infinity;
-
             for (let i = 0; i < unvisited.length; i++) {
                 let dist = getDistance(lastLoc.lat, lastLoc.lng, unvisited[i].lat, unvisited[i].lng);
-                if (dist < minDistance) {
-                    minDistance = dist;
-                    closestIdx = i;
-                }
+                if (dist < minDistance) { minDistance = dist; closestIdx = i; }
             }
             optimized.push(unvisited.splice(closestIdx, 1)[0]);
         }
-        
         locations = optimized;
-        save();
-        updateUI();
-        updateAdminStats(); // עדכון הזמנים לאחר השינוי
+        save(); updateUI(); calculateStatsFromLocation();
         showToast("המסלול סודר בהצלחה! ⚡");
     }
 
-    // --- שאר הפונקציות ---
     function startShift() {
         const mPhone = document.getElementById('managerPhone').value.replace(/\D/g,'');
-        if(!mPhone) return alert("שגיאה: מספר מנהל לא הוגדר");
+        if(!mPhone) return alert("מספר מנהל לא הוגדר");
         window.open(`https://wa.me/972${mPhone.startsWith('0')?mPhone.substring(1):mPhone}?text=${encodeURIComponent("אני מתחיל משמרת, לחץ לשיתוף מיקום חי")}`, '_blank');
         document.getElementById('startShiftModal').style.display = 'none';
         sessionStorage.setItem('shiftStarted', 'true');
+        calculateStatsFromLocation();
     }
 
     function loadCustomerDatalist() { const list = document.getElementById('customerList'); list.innerHTML = ''; Object.keys(customers).sort().forEach(name => { const option = document.createElement('option'); option.value = name; list.appendChild(option); }); }
     function fillCustomerPhone() { const name = document.getElementById('custName').value; if (customers[name]) { const full = customers[name]; document.getElementById('phonePrefix').value = full.substring(0,3); document.getElementById('custPhone').value = full.substring(3); } }
     
-    let debounceTimer;
-    function debounceSearch() { clearTimeout(debounceTimer); debounceTimer = setTimeout(searchAddress, 300); }
-    async function searchAddress() {
-        const query = document.getElementById('addressInput').value;
-        const box = document.getElementById('suggestions');
-        if (query.length < 3) { box.style.display = 'none'; return; }
-        try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1&countrycodes=il`);
-            const data = await res.json();
-            box.innerHTML = '';
-            if (data.length > 0) {
-                topSuggestion = data[0]; box.style.display = 'block';
-                data.forEach((item, index) => {
-                    const div = document.createElement('div'); div.className = 'suggestion-item';
-                    const addr = item.address;
-                    let main = (addr.road||addr.street||query) + (addr.house_number ? " "+addr.house_number : "");
-                    let sub = addr.city || addr.town || "";
-                    div.innerHTML = `<div style="font-weight:bold">${main}</div><div style="font-size:0.8rem">${sub}</div>`;
-                    div.onclick = () => selectAddress(item); box.appendChild(div);
-                });
-            } else { box.style.display = 'none'; topSuggestion = null; }
-        } catch (e) {}
-    }
-    function selectAddress(item) {
-        const input = document.getElementById('addressInput');
-        const orig = input.value.match(/\d+$/);
-        const userNum = orig ? orig[0] : '';
-        const addr = item.address;
-        let final = (addr.road||addr.street||'') + " " + (addr.house_number||userNum) + ", " + (addr.city||'');
-        input.value = final; input.dataset.lat = item.lat; input.dataset.lng = item.lon;
-        document.getElementById('suggestions').style.display = 'none';
-        document.getElementById('custPhone').focus();
-    }
-
     async function addNewLocation() {
         const input = document.getElementById('addressInput');
         let lat = input.dataset.lat, lng = input.dataset.lng;
@@ -372,10 +400,10 @@
         
         input.dataset.lat = ''; input.dataset.lng = '';
         ['addressInput','custName','orderNum','custPhone'].forEach(id => document.getElementById(id).value = '');
-        document.getElementById('custName').focus(); save(); updateUI(); updateAdminStats();
+        document.getElementById('custName').focus(); save(); updateUI(); calculateStatsFromLocation();
     }
 
-    function initSortable() { const el = document.getElementById('addressList'); sortableInstance = Sortable.create(el, { handle: '.route-item', animation: 150, onEnd: function (evt) { const item = locations.splice(evt.oldIndex, 1)[0]; locations.splice(evt.newIndex, 0, item); save(); updateUI(); updateAdminStats(); } }); }
+    function initSortable() { const el = document.getElementById('addressList'); sortableInstance = Sortable.create(el, { handle: '.route-item', animation: 150, onEnd: function (evt) { const item = locations.splice(evt.oldIndex, 1)[0]; locations.splice(evt.newIndex, 0, item); save(); updateUI(); calculateStatsFromLocation(); } }); }
 
     function updateUI() {
         const list = document.getElementById('addressList'); list.innerHTML = '';
@@ -383,7 +411,6 @@
         let foundActive = false;
 
         locations.forEach((loc, i) => {
-            // לוגיקת חסימה - רק לנהג!
             let isLocked = false;
             let isActive = false;
 
@@ -394,19 +421,20 @@
             }
 
             const item = document.createElement('div');
-            // למנהל אין locked, לנהג יש
             item.className = `route-item ${loc.reported ? 'is-completed' : ''} ${loc.skipped ? 'is-skipped' : ''} ${isLocked ? 'driver-locked' : ''} ${isActive ? 'active-now' : ''}`;
             const mPhone = document.getElementById('managerPhone').value.replace(/\D/g,'');
             const msg = encodeURIComponent(`💡 Cabasso Group\n📦 הזמנה: ${loc.orderId}\n👤 לקוח: ${loc.custName}\n📍 כתובת: ${loc.name}\n✅ סטטוס: נמסר!`);
             const waLink = `https://wa.me/972${mPhone.startsWith('0')?mPhone.substring(1):mPhone}?text=${msg}`;
+            
+            // תצוגת Waze מדויקת לכתובת (שימוש בשם ולא בקואורדינטות)
+            const wazeUrl = `https://waze.com/ul?q=${encodeURIComponent(loc.name)}&navigate=yes`;
 
             let statusText = 'ממתין';
             if (loc.reported) statusText = 'נמסר: ' + loc.time;
             else if (loc.skipped) statusText = 'דילוג: ' + loc.time;
             else if (isDriverMode && isLocked) statusText = 'נעול 🔒';
-            else if (isDriverMode && isActive) statusText = 'בטיפול כעת 🚚';
+            else statusText = 'בטיפול כעת 🚚';
 
-            // אייקון גרירה למנהל בלבד
             const showDrag = !isDriverMode;
 
             item.innerHTML = `
@@ -414,10 +442,11 @@
                 <span class="badge ${loc.reported ? 'active' : ''}">${statusText}</span>
                 <div style="font-weight:700; font-size:1.1rem;">${i+1}. ${loc.custName} <span style="font-weight:400; font-size:0.9rem;">(#${loc.orderId})</span></div>
                 <div style="font-size:0.9rem; color:#666; margin-bottom:5px;">${loc.name}</div>
+                ${loc.eta && !loc.completed && !loc.skipped ? `<div class="eta-badge">🕒 משוער: ${loc.eta}</div>` : ''}
                 
                 <div class="actions">
                     ${!loc.completed && !loc.skipped && (!isDriverMode || !isLocked) && !isEditMode ? `
-                        <a href="https://waze.com/ul?ll=${loc.lat},${loc.lng}&navigate=yes" class="btn btn-waze">Waze</a>
+                        <a href="${wazeUrl}" class="btn btn-waze">Waze</a>
                         ${loc.phone.length > 3 ? `<a href="tel:${loc.phone}" class="btn btn-call">📞 חיוג</a>` : ''}
                         <button onclick="openSignature(${i})" class="btn btn-done">סיום</button>
                         <button onclick="skipLocation(${i})" class="btn btn-skip">אין מענה</button>
@@ -436,8 +465,8 @@
         if (markers.length > 0) map.fitBounds(new L.featureGroup(markers).getBounds().pad(0.2));
     }
 
-    function reportDone(i) { locations[i].reported = true; locations[i].time = new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}); save(); setTimeout(updateUI, 1500); }
-    function skipLocation(i) { if(confirm("לדלג על הכתובת?")) { locations[i].skipped = true; locations[i].time = new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}); save(); updateUI(); } }
+    function reportDone(i) { locations[i].reported = true; locations[i].time = new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}); save(); calculateStatsFromLocation(); setTimeout(updateUI, 1500); }
+    function skipLocation(i) { if(confirm("לדלג על הכתובת?")) { locations[i].skipped = true; locations[i].time = new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}); save(); calculateStatsFromLocation(); updateUI(); } }
     function openSignature(i) { currentSignIndex = i; document.getElementById('signatureModal').style.display = 'flex'; ctx.clearRect(0,0,canvas.width,canvas.height); }
     function clearSignature() { ctx.clearRect(0,0,canvas.width,canvas.height); }
     
@@ -462,8 +491,8 @@
     
     function toggleEditMode() { isEditMode = !isEditMode; document.getElementById('editModeBtn').innerText = isEditMode ? "סיום עריכה ✅" : "עריכה ✏️"; document.getElementById('editModeBtn').style.background = isEditMode ? "var(--green)" : "#34495e"; if(isEditMode && sortableInstance) sortableInstance.option("disabled", true); else if(sortableInstance) sortableInstance.option("disabled", false); updateUI(); }
     function editItem(i) { const loc = locations[i]; document.getElementById('custName').value = loc.custName; document.getElementById('orderNum').value = loc.orderId; document.getElementById('addressInput').value = loc.name; if(loc.phone) { document.getElementById('phonePrefix').value = loc.phone.substring(0,3); document.getElementById('custPhone').value = loc.phone.substring(3); } document.getElementById('editIndex').value = i; document.getElementById('addBtn').innerText = "שמור שינויים ✔️"; document.getElementById('addBtn').style.background = "var(--green)"; window.scrollTo({top:0, behavior:'smooth'}); }
-    function deleteItem(i) { if(confirm("למחוק?")) { locations.splice(i, 1); save(); updateUI(); updateAdminStats(); } }
-    function clearAll() { if(confirm("לאפס את כל המערכת?")) { locations = []; save(); updateUI(); updateAdminStats(); } }
+    function deleteItem(i) { if(confirm("למחוק?")) { locations.splice(i, 1); save(); updateUI(); calculateStatsFromLocation(); } }
+    function clearAll() { if(confirm("לאפס?")) { locations = []; save(); updateUI(); calculateStatsFromLocation(); } }
     function showToast(msg) { const x = document.getElementById("toast"); x.innerText = msg; x.className = "show"; setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000); }
     async function generateShortLink() { if(locations.length===0) return showToast("ריק"); const encoded = btoa(encodeURIComponent(JSON.stringify(locations))); const longLink = window.location.origin + window.location.pathname + "?d=" + encoded; try { const res = await fetch(`https://is.gd/create.php?format=json&url=${encodeURIComponent(longLink)}`); const d = await res.json(); const link = d.shorturl || longLink; window.location.href = `https://wa.me/?text=${encodeURIComponent("מסלול חלוקה Cabasso: " + link)}`; } catch(e) { window.location.href = `https://wa.me/?text=${encodeURIComponent("מסלול חלוקה: " + longLink)}`; } }
     function exportDailyReport() { let csv = "הזמנה,לקוח,כתובת,סטטוס,שעה\n"; locations.forEach(l => { let s = l.reported ? "בוצע" : (l.skipped ? "דילוג" : "טרם"); csv += `${l.orderId},${l.custName},"${l.name}",${s},${l.time||'-'}\n`; }); const blob = new Blob(["\ufeff"+csv], {type:'text/csv;charset=utf-8;'}); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `Report_${new Date().toLocaleDateString().replace(/\//g,'-')}.csv`; link.click(); }
