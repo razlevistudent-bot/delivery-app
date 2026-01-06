@@ -19,12 +19,14 @@
         
         /* סטריפ סיכום זמן למנהל */
         .admin-stats-bar { 
-            background: #2c3e50; color: white; padding: 12px; border-radius: 12px; 
-            margin-bottom: 15px; text-align: center; font-size: 0.9rem; 
+            background: #2c3e50; color: white; padding: 15px; border-radius: 12px; 
+            margin-bottom: 20px; text-align: center; font-size: 0.9rem; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.1); border: 1px solid var(--gold);
-            display: flex; justify-content: space-around; align-items: center;
+            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;
         }
-        .stat-item span { display: block; font-size: 1.1rem; font-weight: bold; color: var(--gold); }
+        .stat-item { background: rgba(255,255,255,0.05); padding: 8px; border-radius: 8px; }
+        .stat-item span { display: block; font-size: 1.1rem; font-weight: bold; color: var(--gold); margin-top: 4px; }
+        .stat-total { grid-column: span 3; background: var(--gold); color: black; font-weight: bold; margin-top: 5px; }
 
         .glass-card { background: var(--white); border-radius: 16px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 15px; }
         
@@ -37,7 +39,10 @@
         #map { height: 220px; border-radius: 16px; margin-bottom: 15px; z-index: 1; border: 2px solid white; }
         
         .route-item { background: var(--white); padding: 18px; border-radius: 14px; margin-bottom: 12px; border-right: 5px solid var(--gold); position: relative; transition: 0.3s; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .route-item.is-locked { opacity: 0.5; filter: grayscale(1); pointer-events: none; border-right-color: var(--locked); background: #f9f9f9; }
+        
+        /* חסימה רק לנהג */
+        .route-item.driver-locked { opacity: 0.5; filter: grayscale(1); pointer-events: none; border-right-color: var(--locked); background: #f9f9f9; }
+        
         .route-item.is-completed { border-right-color: var(--green); background: #f0fff4; opacity: 0.8; }
         .route-item.is-skipped { border-right-color: var(--red); background: #fff5f5; opacity: 0.8; }
 
@@ -92,7 +97,7 @@
 <div class="container">
     <header>
         <h1>CABASSO GROUP</h1>
-        <p id="mode-text">מערכת לוגיסטיקה</p>
+        <p id="mode-text">ניהול לוגיסטיקה</p>
     </header>
 
     <div class="glass-card" style="background: #222; color: white;">
@@ -105,17 +110,17 @@
     </div>
 
     <div id="adminStats" class="admin-stats-bar" style="display:none;">
-        <div class="stat-item">משלוחים<span id="statCount">0</span></div>
         <div class="stat-item">זמן נסיעה<span id="statDrive">0 דק'</span></div>
-        <div class="stat-item">זמן פריקה<span id="statWork">0 דק'</span></div>
-        <div class="stat-item">סה"כ<span id="statTotal" style="color:#2ecc71">00:00</span></div>
+        <div class="stat-item">זמן פריקה<span id="statUnload">0 דק'</span></div>
+        <div class="stat-item">כמות<span id="statCount">0</span></div>
+        <div class="stat-item stat-total">זמן כולל משוער: <span id="statTotal" style="display:inline; color:black;">00:00</span></div>
     </div>
 
     <div id="admin-panel" class="glass-card">
         <input type="hidden" id="editIndex" value="-1">
         
         <div class="admin-tools-row">
-            <button onclick="alert('ניתן לגרור את הכרטיסים למטה כדי לשנות סדר ידנית')" class="btn btn-manual">🖐️ סידור ידני</button>
+            <button onclick="alert('ניתן לגרור את הכרטיסים למטה לשינוי סדר')" class="btn btn-manual">🖐️ סידור ידני</button>
             <button onclick="optimizeRouteForAdmin()" class="btn btn-optimize">⚡ סידור חכם (זמן+מרחק)</button>
         </div>
 
@@ -182,6 +187,7 @@
     var sortableInstance = null;
     var topSuggestion = null;
     var customers = JSON.parse(localStorage.getItem('cabasso_customers')) || {};
+    var isDriverMode = false; // משתנה גלובלי לזיהוי מצב
 
     const canvas = document.getElementById('signature-pad');
     const ctx = canvas.getContext('2d');
@@ -194,9 +200,10 @@
     window.onload = function() {
         const dataParam = new URLSearchParams(window.location.search).get('d');
         if (dataParam) {
-            // מצב נהג
+            // --- מצב נהג ---
+            isDriverMode = true;
             document.getElementById('admin-panel').style.display = 'none';
-            document.getElementById('adminStats').style.display = 'none'; // הסתרת סיכום מנהל לנהג
+            document.getElementById('adminStats').style.display = 'none'; 
             document.getElementById('mode-text').innerText = "נהג - מסלול קבוע";
             try { locations = JSON.parse(decodeURIComponent(atob(dataParam))); } catch(e){}
             
@@ -204,8 +211,9 @@
                 document.getElementById('startShiftModal').style.display = 'flex';
             }
         } else {
-            // מצב מנהל
-            document.getElementById('adminStats').style.display = 'flex';
+            // --- מצב מנהל ---
+            isDriverMode = false;
+            document.getElementById('adminStats').style.display = 'grid'; // הצגת הסטריפ
             locations = JSON.parse(localStorage.getItem('cabasso_pro')) || [];
             initSortable();
             loadCustomerDatalist();
@@ -223,40 +231,45 @@
     function save() { localStorage.setItem('cabasso_pro', JSON.stringify(locations)); }
     function saveManager() { localStorage.setItem('manager_num', document.getElementById('managerPhone').value); }
 
-    // --- חישוב סטטיסטיקות למנהל ---
+    // --- חישוב סטטיסטיקות למנהל (נסיעה + פריקה) ---
     function updateAdminStats() {
-        if(locations.length === 0) return;
+        if(locations.length === 0) {
+            document.getElementById('statCount').innerText = "0";
+            document.getElementById('statDrive').innerText = "0 דק'";
+            document.getElementById('statUnload').innerText = "0 דק'";
+            document.getElementById('statTotal').innerText = "00:00";
+            return;
+        }
         
         let totalDriveMinutes = 0;
-        let totalWorkMinutes = locations.length * 15; // 15 דקות לכל נקודה
+        let totalUnloadMinutes = locations.length * 15; // 15 דקות פריקה לכל נקודה
         
-        // חישוב מרחק אווירי פשוט בין כל הנקודות להערכת זמן נסיעה
-        // (הערכה: 40 קמ"ש ממוצע בעיר)
+        // חישוב מרחק אווירי (לצורך הערכה מהירה)
         for (let i = 0; i < locations.length - 1; i++) {
             const dist = getDistance(locations[i].lat, locations[i].lng, locations[i+1].lat, locations[i+1].lng);
-            // זמן בדקות = (מרחק / מהירות) * 60. הוספנו מקדם 1.3 לעומס
-            totalDriveMinutes += (dist / 40) * 60 * 1.3;
+            // מהירות ממוצעת משוערת 30 קמ"ש בעיר + מקדם
+            totalDriveMinutes += (dist / 30) * 60 * 1.2; 
         }
 
-        const totalMinutes = Math.round(totalDriveMinutes + totalWorkMinutes);
+        const totalMinutes = Math.round(totalDriveMinutes + totalUnloadMinutes);
         const hours = Math.floor(totalMinutes / 60);
         const mins = totalMinutes % 60;
 
         document.getElementById('statCount').innerText = locations.length;
         document.getElementById('statDrive').innerText = Math.round(totalDriveMinutes) + " דק'";
-        document.getElementById('statWork').innerText = totalWorkMinutes + " דק'";
+        document.getElementById('statUnload').innerText = totalUnloadMinutes + " דק'";
         document.getElementById('statTotal').innerText = `${hours} ש' ${mins} דק'`;
     }
 
     function getDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371; // km
+        const R = 6371; 
         const dLat = (lat2-lat1) * Math.PI/180;
         const dLon = (lon2-lon1) * Math.PI/180;
         const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) * Math.sin(dLon/2) * Math.sin(dLon/2);
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     }
 
-    // --- אופטימיזציה חכמה למנהל (TSP בסיסי) ---
+    // --- אופטימיזציה חכמה למנהל (Nearest Neighbor) ---
     function optimizeRouteForAdmin() {
         if (locations.length < 2) return alert("צריך לפחות 2 נקודות לסידור");
         
@@ -282,20 +295,19 @@
         locations = optimized;
         save();
         updateUI();
-        updateAdminStats();
-        alert("המסלול סודר מחדש לפי זמן ומרחק אופטימליים! ⚡");
+        updateAdminStats(); // עדכון הזמנים לאחר השינוי
+        showToast("המסלול סודר בהצלחה! ⚡");
     }
 
-    // --- פונקציות נהג ---
+    // --- שאר הפונקציות ---
     function startShift() {
         const mPhone = document.getElementById('managerPhone').value.replace(/\D/g,'');
-        if(!mPhone) return alert("מספר מנהל חסר");
+        if(!mPhone) return alert("שגיאה: מספר מנהל לא הוגדר");
         window.open(`https://wa.me/972${mPhone.startsWith('0')?mPhone.substring(1):mPhone}?text=${encodeURIComponent("אני מתחיל משמרת, לחץ לשיתוף מיקום חי")}`, '_blank');
         document.getElementById('startShiftModal').style.display = 'none';
         sessionStorage.setItem('shiftStarted', 'true');
     }
 
-    // --- שאר הלוגיקה (זהה לקודם) ---
     function loadCustomerDatalist() { const list = document.getElementById('customerList'); list.innerHTML = ''; Object.keys(customers).sort().forEach(name => { const option = document.createElement('option'); option.value = name; list.appendChild(option); }); }
     function fillCustomerPhone() { const name = document.getElementById('custName').value; if (customers[name]) { const full = customers[name]; document.getElementById('phonePrefix').value = full.substring(0,3); document.getElementById('custPhone').value = full.substring(3); } }
     
@@ -363,7 +375,7 @@
         document.getElementById('custName').focus(); save(); updateUI(); updateAdminStats();
     }
 
-    function initSortable() { const el = document.getElementById('addressList'); sortableInstance = Sortable.create(el, { handle: '.route-item', animation: 150, onEnd: function (evt) { const item = locations.splice(evt.oldIndex, 1)[0]; locations.splice(evt.newIndex, 0, item); save(); updateUI(); } }); }
+    function initSortable() { const el = document.getElementById('addressList'); sortableInstance = Sortable.create(el, { handle: '.route-item', animation: 150, onEnd: function (evt) { const item = locations.splice(evt.oldIndex, 1)[0]; locations.splice(evt.newIndex, 0, item); save(); updateUI(); updateAdminStats(); } }); }
 
     function updateUI() {
         const list = document.getElementById('addressList'); list.innerHTML = '';
@@ -371,11 +383,19 @@
         let foundActive = false;
 
         locations.forEach((loc, i) => {
-            let isLocked = foundActive && !loc.reported && !loc.skipped;
-            if (!loc.reported && !loc.skipped) foundActive = true;
+            // לוגיקת חסימה - רק לנהג!
+            let isLocked = false;
+            let isActive = false;
+
+            if (isDriverMode) {
+                isLocked = foundActive && !loc.reported && !loc.skipped;
+                isActive = !foundActive && !loc.reported && !loc.skipped;
+                if (!loc.reported && !loc.skipped) foundActive = true;
+            }
 
             const item = document.createElement('div');
-            item.className = `route-item ${loc.reported ? 'is-completed' : ''} ${loc.skipped ? 'is-skipped' : ''} ${isLocked ? 'is-locked' : ''}`;
+            // למנהל אין locked, לנהג יש
+            item.className = `route-item ${loc.reported ? 'is-completed' : ''} ${loc.skipped ? 'is-skipped' : ''} ${isLocked ? 'driver-locked' : ''} ${isActive ? 'active-now' : ''}`;
             const mPhone = document.getElementById('managerPhone').value.replace(/\D/g,'');
             const msg = encodeURIComponent(`💡 Cabasso Group\n📦 הזמנה: ${loc.orderId}\n👤 לקוח: ${loc.custName}\n📍 כתובת: ${loc.name}\n✅ סטטוס: נמסר!`);
             const waLink = `https://wa.me/972${mPhone.startsWith('0')?mPhone.substring(1):mPhone}?text=${msg}`;
@@ -383,11 +403,11 @@
             let statusText = 'ממתין';
             if (loc.reported) statusText = 'נמסר: ' + loc.time;
             else if (loc.skipped) statusText = 'דילוג: ' + loc.time;
-            else if (isLocked) statusText = 'נעול 🔒';
-            else statusText = 'בטיפול כעת 🚚';
+            else if (isDriverMode && isLocked) statusText = 'נעול 🔒';
+            else if (isDriverMode && isActive) statusText = 'בטיפול כעת 🚚';
 
-            // מנהל רואה אייקון גרירה, נהג לא
-            const showDrag = !new URLSearchParams(window.location.search).get('d');
+            // אייקון גרירה למנהל בלבד
+            const showDrag = !isDriverMode;
 
             item.innerHTML = `
                 ${showDrag ? '<span class="drag-handle" style="display:block; float:left;">☰</span>' : ''}
@@ -396,7 +416,7 @@
                 <div style="font-size:0.9rem; color:#666; margin-bottom:5px;">${loc.name}</div>
                 
                 <div class="actions">
-                    ${!loc.completed && !loc.skipped && !isLocked && !isEditMode ? `
+                    ${!loc.completed && !loc.skipped && (!isDriverMode || !isLocked) && !isEditMode ? `
                         <a href="https://waze.com/ul?ll=${loc.lat},${loc.lng}&navigate=yes" class="btn btn-waze">Waze</a>
                         ${loc.phone.length > 3 ? `<a href="tel:${loc.phone}" class="btn btn-call">📞 חיוג</a>` : ''}
                         <button onclick="openSignature(${i})" class="btn btn-done">סיום</button>
