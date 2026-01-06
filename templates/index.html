@@ -53,6 +53,9 @@
         .btn-share { background: #2980b9; width: 100%; margin-top: 15px; font-size: 1rem; padding: 15px; }
         .btn-export { background: #34495e; width: 100%; margin-top: 20px; font-size: 0.85rem; }
         
+        /* כפתור הדפסת מדבקות */
+        .btn-print { background: #8e44ad; color: white; width: 100%; margin-top: 5px; }
+
         .admin-tools-row { display: flex; gap: 10px; margin-bottom: 15px; }
         .btn-optimize { background: linear-gradient(45deg, var(--gold), #f1c40f); color: black; flex: 1; }
         .btn-manual { background: #95a5a6; color: white; flex: 1; }
@@ -72,8 +75,10 @@
         .modal-content { background: white; padding: 25px; border-radius: 20px; width: 90%; max-width: 400px; text-align: center; position: relative; }
         #signature-pad { border: 2px dashed #ccc; background: #fdfdfd; touch-action: none; width: 100%; height: 180px; border-radius: 12px; margin: 15px 0; }
 
+        /* מסך פתיחה לנהג */
         #startShiftModal { display: none; z-index: 3000; background: var(--brand); }
-        .start-btn { background: var(--gold); color: black; font-size: 1.2rem; padding: 20px; width: 100%; border-radius: 12px; font-weight: bold; animation: pulse 2s infinite; border: none; cursor: pointer; }
+        .start-btn { background: var(--gold); color: black; font-size: 1.2rem; padding: 15px; width: 100%; border-radius: 12px; font-weight: bold; animation: pulse 2s infinite; border: none; cursor: pointer; margin-top: 15px; }
+        .driver-input { width: 100%; padding: 15px; font-size: 1.1rem; border-radius: 10px; border: none; text-align: center; margin-top: 10px; }
 
         .number-marker { background: var(--brand); color: var(--gold); border: 2px solid var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; }
         .badge { font-size: 0.7rem; padding: 4px 10px; border-radius: 20px; background: #eee; display: inline-block; margin-bottom: 8px; font-weight: bold; }
@@ -104,7 +109,8 @@
 <div id="startShiftModal" class="modal">
     <div class="modal-content" style="background: transparent; color: white; border: none; box-shadow: none;">
         <h1 style="color: var(--gold); margin-bottom: 20px;">התחלת משמרת</h1>
-        <p style="margin-bottom: 30px;">חובה לשתף מיקום חי עם המנהל לפני יציאה.</p>
+        <p style="margin-bottom: 10px;">לאן לשלוח את המיקום החי?</p>
+        <input type="tel" id="targetPhone" class="driver-input" placeholder="הזן מספר מנהל (050...)" />
         <button onclick="startShift()" class="start-btn">📍 שתף מיקום והתחל</button>
     </div>
 </div>
@@ -116,7 +122,7 @@
     </header>
 
     <div class="glass-card" style="background: #222; color: white;">
-        <label style="color: #aaa; font-size: 0.75rem;">מספר מנהל לדיווחים (WhatsApp):</label>
+        <label style="color: #aaa; font-size: 0.75rem;">מספר מנהל לדיווחים (ברירת מחדל):</label>
         <input type="tel" id="managerPhone" placeholder="0501234567" onchange="saveManager()" style="background:#333; color:white; border:none; margin-bottom:0;">
         <div style="margin-top: 10px;">
             <label style="color: #aaa; font-size: 0.75rem;">מייל מנהל לחתימות:</label>
@@ -225,7 +231,6 @@
     window.onload = function() {
         const dataParam = new URLSearchParams(window.location.search).get('d');
         if (dataParam) {
-            // נהג
             isDriverMode = true;
             document.getElementById('admin-panel').style.display = 'none';
             document.getElementById('adminStats').style.display = 'flex'; 
@@ -234,11 +239,12 @@
             
             if (!sessionStorage.getItem('shiftStarted')) {
                 document.getElementById('startShiftModal').style.display = 'flex';
+                // מילוי אוטומטי של מספר המנהל אם קיים במערכת (לנוחות)
+                // במצב אמת, לנהג אין localStorage של מנהל, אז זה יישאר ריק
             } else {
                 calculateStatsFromLocation();
             }
         } else {
-            // מנהל
             isDriverMode = false;
             document.getElementById('adminStats').style.display = 'grid';
             locations = JSON.parse(localStorage.getItem('cabasso_pro')) || [];
@@ -249,19 +255,8 @@
         document.getElementById('managerPhone').value = localStorage.getItem('manager_num') || '';
         document.getElementById('managerEmail').value = localStorage.getItem('manager_email') || '';
         
-        // האזנה לאנטר בכתובת
         document.getElementById('addressInput').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') { 
-                e.preventDefault();
-                // אם יש הצעה, נשתמש בה, אחרת נשתמש במה שכתוב כרגע
-                if (topSuggestion) { 
-                    selectAddress(topSuggestion); 
-                } else { 
-                    // אם לוחצים אנטר בלי לבחור, פשוט עוברים לשדה הבא כדי שהמשתמש ימלא טלפון
-                    // אבל קודם ננסה למצוא את הכתובת ב-addNewLocation
-                    document.getElementById('pkgCount').focus();
-                } 
-            }
+            if (e.key === 'Enter') { e.preventDefault(); if (topSuggestion) { selectAddress(topSuggestion); } else { addNewLocation(); } }
         });
         updateUI();
     };
@@ -269,7 +264,7 @@
     function save() { localStorage.setItem('cabasso_pro', JSON.stringify(locations)); }
     function saveManager() { localStorage.setItem('manager_num', document.getElementById('managerPhone').value); }
 
-    // --- חיפוש כתובות מתוקן ---
+    // --- חיפוש כתובות ---
     let debounceTimer;
     function debounceSearch() { clearTimeout(debounceTimer); debounceTimer = setTimeout(searchAddress, 300); }
     
@@ -293,139 +288,41 @@
                     const addr = item.address;
                     let street = addr.road || addr.street || addr.pedestrian || query;
                     let city = addr.city || addr.town || addr.village || '';
-                    
-                    // בדיקה האם יש מספר בתוצאה
-                    const apiHasNum = addr.house_number;
-                    
-                    // בדיקה האם יש מספר בקלט המשתמש
                     const userNumMatch = query.match(/\d+/);
-                    
+                    const apiHasNum = addr.house_number;
                     let displayName = street;
-                    
-                    // אם המשתמש הקליד מספר אבל ה-API לא החזיר, נציג אותו
-                    if (!apiHasNum && userNumMatch) {
-                        displayName += " " + userNumMatch[0];
-                    } else if (apiHasNum) {
-                        displayName += " " + apiHasNum;
-                    }
+                    if (!apiHasNum && userNumMatch) { displayName += " " + userNumMatch[0]; } 
+                    else if (apiHasNum) { displayName += " " + apiHasNum; }
 
                     div.innerHTML = `<div class="addr-main">${displayName}</div><div class="addr-sub">${city}</div>`;
-                    
-                    div.onclick = () => selectAddress(item);
+                    div.onclick = () => selectAddress(item, displayName);
                     box.appendChild(div);
                 });
             } else { box.style.display = 'none'; topSuggestion = null; }
         } catch (e) {}
     }
 
-    function selectAddress(item) {
+    function selectAddress(item, forcedName = null) {
         const input = document.getElementById('addressInput');
         const box = document.getElementById('suggestions');
-        const currentVal = input.value;
         
-        // 1. קח את שם הרחוב מה-API
-        const addr = item.address;
-        let street = addr.road || addr.street || currentVal;
-        
-        // 2. בדוק אם יש מספר ב-API
-        let houseNum = addr.house_number;
-        
-        // 3. אם אין מספר ב-API, חפש אותו בקלט המקורי של המשתמש
-        if (!houseNum) {
-            const userNumMatch = currentVal.match(/\d+/);
-            if (userNumMatch) houseNum = userNumMatch[0];
+        if (forcedName) {
+            input.value = forcedName + ", " + (item.address.city || item.address.town || '');
+        } else {
+            const currentVal = input.value;
+            const userNum = currentVal.match(/\d+$/);
+            let finalName = item.address.road || item.address.street || currentVal;
+            if (!item.address.house_number && userNum) finalName += " " + userNum[0];
+            else if (item.address.house_number) finalName += " " + item.address.house_number;
+            input.value = finalName + ", " + (item.address.city || '');
         }
-        
-        // 4. בנה את הכתובת הסופית שתוצג ותשלח לוויז
-        let finalName = street;
-        if (houseNum) finalName += " " + houseNum;
-        if (addr.city) finalName += ", " + addr.city;
-        else if (addr.town) finalName += ", " + addr.town;
-
-        input.value = finalName;
-        
-        // שמירת קואורדינטות (אפילו אם הן של מרכז הרחוב)
         input.dataset.lat = item.lat;
         input.dataset.lng = item.lon;
-        
         box.style.display = 'none';
         document.getElementById('pkgCount').focus();
     }
 
-    // --- שאר הפונקציות ---
-    function updateAdminStats() {
-        if(locations.length === 0) {
-            document.getElementById('statCount').innerText = "0";
-            document.getElementById('statDrive').innerText = "0 דק'";
-            document.getElementById('statUnload').innerText = "0 דק'";
-            document.getElementById('statTotal').innerText = "00:00";
-            return;
-        }
-        
-        navigator.geolocation.getCurrentPosition((pos) => {
-            let prevLat = pos.coords.latitude;
-            let prevLng = pos.coords.longitude;
-            let totalDriveMinutes = 0;
-            let totalUnloadMinutes = locations.length * 15; 
-            
-            for (let i = 0; i < locations.length; i++) {
-                const dist = getDistance(prevLat, prevLng, locations[i].lat, locations[i].lng);
-                totalDriveMinutes += (dist / 30) * 60 * 1.2; 
-                prevLat = locations[i].lat; prevLng = locations[i].lng;
-            }
-
-            const totalMinutes = Math.round(totalDriveMinutes + totalUnloadMinutes);
-            const hours = Math.floor(totalMinutes / 60);
-            const mins = totalMinutes % 60;
-
-            document.getElementById('statCount').innerText = locations.length;
-            document.getElementById('statDrive').innerText = Math.round(totalDriveMinutes) + " דק'";
-            document.getElementById('statUnload').innerText = totalUnloadMinutes + " דק'";
-            
-            let endTime = new Date();
-            endTime.setMinutes(endTime.getMinutes() + totalMinutes);
-            document.getElementById('statTotal').innerText = `~${endTime.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} (${hours}ש ${mins}ד)`;
-        }, () => {
-            document.getElementById('statTotal').innerText = "נדרש מיקום";
-        });
-    }
-
-    function getDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371; 
-        const dLat = (lat2-lat1) * Math.PI/180;
-        const dLon = (lon2-lon1) * Math.PI/180;
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) * Math.sin(dLon/2) * Math.sin(dLon/2);
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    }
-
-    function optimizeRouteForAdmin() {
-        if (locations.length < 2) return alert("נדרשות לפחות 2 נקודות");
-        let optimized = [locations[0]];
-        let unvisited = locations.slice(1);
-        while (unvisited.length > 0) {
-            let lastLoc = optimized[optimized.length - 1];
-            let closestIdx = 0;
-            let minDistance = Infinity;
-            for (let i = 0; i < unvisited.length; i++) {
-                let dist = getDistance(lastLoc.lat, lastLoc.lng, unvisited[i].lat, unvisited[i].lng);
-                if (dist < minDistance) { minDistance = dist; closestIdx = i; }
-            }
-            optimized.push(unvisited.splice(closestIdx, 1)[0]);
-        }
-        locations = optimized;
-        save(); updateUI(); updateAdminStats();
-        showToast("המסלול סודר בהצלחה! ⚡");
-    }
-
-    function startShift() {
-        const mPhone = document.getElementById('managerPhone').value.replace(/\D/g,'');
-        if(!mPhone) return alert("מספר מנהל לא הוגדר");
-        window.open(`https://wa.me/972${mPhone.startsWith('0')?mPhone.substring(1):mPhone}?text=${encodeURIComponent("אני מתחיל משמרת, לחץ לשיתוף מיקום חי")}`, '_blank');
-        document.getElementById('startShiftModal').style.display = 'none';
-        sessionStorage.setItem('shiftStarted', 'true');
-        calculateStatsFromLocation();
-    }
-
+    // --- חישוב סטטיסטיקות ---
     function calculateStatsFromLocation() {
         if (!navigator.geolocation) {
             document.getElementById('statTotal').innerText = "ממתין למיקום...";
@@ -462,25 +359,62 @@
         }, (err) => { document.getElementById('statTotal').innerText = "אין גישת מיקום"; });
     }
 
+    function getDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371; 
+        const dLat = (lat2-lat1) * Math.PI/180;
+        const dLon = (lon2-lon1) * Math.PI/180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    // --- אופטימיזציה למנהל ---
+    function optimizeRouteForAdmin() {
+        if (locations.length < 2) return alert("נדרשות לפחות 2 נקודות");
+        let optimized = [locations[0]];
+        let unvisited = locations.slice(1);
+        while (unvisited.length > 0) {
+            let lastLoc = optimized[optimized.length - 1];
+            let closestIdx = 0;
+            let minDistance = Infinity;
+            for (let i = 0; i < unvisited.length; i++) {
+                let dist = getDistance(lastLoc.lat, lastLoc.lng, unvisited[i].lat, unvisited[i].lng);
+                if (dist < minDistance) { minDistance = dist; closestIdx = i; }
+            }
+            optimized.push(unvisited.splice(closestIdx, 1)[0]);
+        }
+        locations = optimized;
+        save(); updateUI(); calculateStatsFromLocation();
+        showToast("המסלול סודר בהצלחה! ⚡");
+    }
+
+    // --- נהג ---
+    function startShift() {
+        // לוקחים את המספר מהשדה שבו הנהג הזין
+        let targetPhone = document.getElementById('targetPhone').value;
+        targetPhone = targetPhone.replace(/\D/g,''); // ניקוי תווים
+
+        if(!targetPhone || targetPhone.length < 9) return alert("נא להזין מספר טלפון תקין");
+        
+        // שמירה ופתיחה
+        window.open(`https://wa.me/972${targetPhone.startsWith('0')?targetPhone.substring(1):targetPhone}?text=${encodeURIComponent("אני מתחיל משמרת, לחץ לשיתוף מיקום חי")}`, '_blank');
+        document.getElementById('startShiftModal').style.display = 'none';
+        sessionStorage.setItem('shiftStarted', 'true');
+        calculateStatsFromLocation();
+    }
+
+    // --- כתובות ---
     function loadCustomerDatalist() { const list = document.getElementById('customerList'); list.innerHTML = ''; Object.keys(customers).sort().forEach(name => { const option = document.createElement('option'); option.value = name; list.appendChild(option); }); }
     function fillCustomerPhone() { const name = document.getElementById('custName').value; if (customers[name]) { const full = customers[name]; document.getElementById('phonePrefix').value = full.substring(0,3); document.getElementById('custPhone').value = full.substring(3); } }
     
     async function addNewLocation() {
         const input = document.getElementById('addressInput');
         let lat = input.dataset.lat, lng = input.dataset.lng;
-        
-        // אם לא נבחרה כתובת מהרשימה אבל יש טקסט
-        if (!lat && input.value.length > 3) {
+        if (!lat) {
             const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(input.value)}&limit=1`);
             const d = await res.json();
             if (d.length > 0) { lat = d[0].lat; lng = d[0].lon; }
-            else { 
-                // אפשר להוסיף גם אם אין קואורדינטות מדויקות (לניווט טקסטואלי בוויז)
-                if(!confirm("לא נמצאו קואורדינטות מדויקות. להוסיף בכל זאת?")) return;
-                lat = 32.0853; lng = 34.7818; // ברירת מחדל
-            }
+            else if(!confirm("לא נמצא מיקום. להוסיף?")) return;
         } 
-        
         const prefix = document.getElementById('phonePrefix').value;
         const num = document.getElementById('custPhone').value;
         const name = document.getElementById('custName').value;
@@ -505,7 +439,7 @@
         document.getElementById('custName').focus(); save(); updateUI(); updateAdminStats();
     }
 
-    function initSortable() { const el = document.getElementById('addressList'); sortableInstance = Sortable.create(el, { handle: '.route-item', animation: 150, onEnd: function (evt) { const item = locations.splice(evt.oldIndex, 1)[0]; locations.splice(evt.newIndex, 0, item); save(); updateUI(); updateAdminStats(); } }); }
+    function initSortable() { const el = document.getElementById('addressList'); sortableInstance = Sortable.create(el, { handle: '.route-item', animation: 150, onEnd: function (evt) { const item = locations.splice(evt.oldIndex, 1)[0]; locations.splice(evt.newIndex, 0, item); save(); updateUI(); calculateStatsFromLocation(); } }); }
 
     function updateUI() {
         const list = document.getElementById('addressList'); list.innerHTML = '';
@@ -527,8 +461,6 @@
             const mPhone = document.getElementById('managerPhone').value.replace(/\D/g,'');
             const msg = encodeURIComponent(`💡 Cabasso Group\n📦 הזמנה: ${loc.orderId}\n👤 לקוח: ${loc.custName}\n📍 כתובת: ${loc.name}\n✅ סטטוס: נמסר!`);
             const waLink = `https://wa.me/972${mPhone.startsWith('0')?mPhone.substring(1):mPhone}?text=${msg}`;
-            
-            // התיקון: שימוש בשם הכתובת המלא ל-Waze
             const wazeUrl = `https://waze.com/ul?q=${encodeURIComponent(loc.name)}&navigate=yes`;
 
             let statusText = 'ממתין';
@@ -550,7 +482,7 @@
                 <div class="actions">
                     ${!loc.completed && !loc.skipped && (!isDriverMode || !isLocked) && !isEditMode ? `
                         <a href="${wazeUrl}" class="btn btn-waze">Waze</a>
-                        ${loc.phone && loc.phone.length > 3 ? `<a href="tel:${loc.phone}" class="btn btn-call">📞 חיוג</a>` : ''}
+                        ${loc.phone.length > 3 ? `<a href="tel:${loc.phone}" class="btn btn-call">📞 חיוג</a>` : ''}
                         <button onclick="openSignature(${i})" class="btn btn-done">סיום</button>
                         <button onclick="skipLocation(${i})" class="btn btn-skip">אין מענה</button>
                     ` : ''}
