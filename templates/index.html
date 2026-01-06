@@ -81,6 +81,21 @@
         .eta-badge { font-size: 0.85rem; color: #555; background: #eef; padding: 3px 8px; border-radius: 5px; margin-top: 5px; display: inline-block; font-weight: bold; }
         .drag-handle { float: left; color: #ccc; cursor: grab; padding: 0 10px; font-size: 1.2rem; }
 
+        /* סגנונות הדפסה בלבד */
+        @media print {
+            body * { visibility: hidden; }
+            #printSection, #printSection * { visibility: visible; }
+            #printSection { position: absolute; left: 0; top: 0; width: 100%; }
+            .label-sticker { 
+                border: 2px solid black; padding: 20px; margin: 10px; page-break-after: always; 
+                text-align: center; font-family: 'Assistant', sans-serif; width: 350px; height: 250px; 
+                display: flex; flex-direction: column; justify-content: center; align-items: center;
+            }
+            .label-logo { font-size: 1.5rem; font-weight: bold; margin-bottom: 10px; }
+            .label-info { font-size: 1.2rem; margin-bottom: 5px; }
+            .label-counter { font-size: 3rem; font-weight: bold; margin-top: 15px; border: 3px solid black; border-radius: 50%; width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; }
+        }
+
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.8; } 100% { opacity: 1; } }
     </style>
 </head>
@@ -132,12 +147,20 @@
             </div>
             <div style="flex:1"><label>הזמנה #</label><input type="text" id="orderNum" placeholder="1001"></div>
         </div>
-        <div style="position: relative;">
-            <label>כתובת (למשל: לח"י 29 בני ברק)</label>
-            <input type="text" id="addressInput" placeholder="הקלד כתובת..." oninput="debounceSearch()" autocomplete="off">
-            <div id="suggestions" class="suggestions-box"></div>
+        
+        <div style="display: flex; gap: 10px; align-items: flex-end;">
+            <div style="flex:2; position: relative;">
+                <label>כתובת (למשל: לח"י 29 בני ברק)</label>
+                <input type="text" id="addressInput" placeholder="הקלד כתובת..." oninput="debounceSearch()" autocomplete="off" style="margin-bottom:0;">
+                <div id="suggestions" class="suggestions-box"></div>
+            </div>
+            <div style="flex:1;">
+                <label>אריזות</label>
+                <input type="number" id="pkgCount" placeholder="1" value="1" min="1" style="margin-bottom:0; text-align:center;">
+            </div>
         </div>
-        <label>טלפון לקוח</label>
+
+        <label style="margin-top:10px;">טלפון לקוח</label>
         <div class="phone-group">
             <select id="phonePrefix"><option value="050">050</option><option value="052">052</option><option value="054">054</option><option value="053">053</option><option value="058">058</option><option value="055">055</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="08">08</option><option value="09">09</option></select>
             <input type="tel" id="custPhone" placeholder="XXXXXXX" maxlength="7">
@@ -167,6 +190,8 @@
         </div>
     </div>
 </div>
+
+<div id="printSection"></div>
 
 <div id="toast" style="visibility:hidden; min-width:250px; background-color:#333; color:#fff; text-align:center; border-radius:50px; padding:16px; position:fixed; z-index:9999; left:50%; bottom:30px; transform:translateX(-50%);">הודעה</div>
 
@@ -200,9 +225,10 @@
     window.onload = function() {
         const dataParam = new URLSearchParams(window.location.search).get('d');
         if (dataParam) {
+            // נהג
             isDriverMode = true;
             document.getElementById('admin-panel').style.display = 'none';
-            document.getElementById('adminStats').style.display = 'flex'; // להציג סטריפ גם לנהג
+            document.getElementById('adminStats').style.display = 'flex'; 
             document.getElementById('mode-text').innerText = "נהג - מסלול קבוע";
             try { locations = JSON.parse(decodeURIComponent(atob(dataParam))); } catch(e){}
             
@@ -212,18 +238,30 @@
                 calculateStatsFromLocation();
             }
         } else {
+            // מנהל
             isDriverMode = false;
             document.getElementById('adminStats').style.display = 'grid';
             locations = JSON.parse(localStorage.getItem('cabasso_pro')) || [];
             initSortable();
             loadCustomerDatalist();
-            calculateStatsFromLocation();
+            updateAdminStats();
         }
         document.getElementById('managerPhone').value = localStorage.getItem('manager_num') || '';
         document.getElementById('managerEmail').value = localStorage.getItem('manager_email') || '';
         
+        // האזנה לאנטר בכתובת
         document.getElementById('addressInput').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') { e.preventDefault(); if (topSuggestion) { selectAddress(topSuggestion); } else { addNewLocation(); } }
+            if (e.key === 'Enter') { 
+                e.preventDefault();
+                // אם יש הצעה, נשתמש בה, אחרת נשתמש במה שכתוב כרגע
+                if (topSuggestion) { 
+                    selectAddress(topSuggestion); 
+                } else { 
+                    // אם לוחצים אנטר בלי לבחור, פשוט עוברים לשדה הבא כדי שהמשתמש ימלא טלפון
+                    // אבל קודם ננסה למצוא את הכתובת ב-addNewLocation
+                    document.getElementById('pkgCount').focus();
+                } 
+            }
         });
         updateUI();
     };
@@ -231,7 +269,7 @@
     function save() { localStorage.setItem('cabasso_pro', JSON.stringify(locations)); }
     function saveManager() { localStorage.setItem('manager_num', document.getElementById('managerPhone').value); }
 
-    // --- לוגיקה מתוקנת לחיפוש כתובות + כפיית טקסט ב-Waze ---
+    // --- חיפוש כתובות מתוקן ---
     let debounceTimer;
     function debounceSearch() { clearTimeout(debounceTimer); debounceTimer = setTimeout(searchAddress, 300); }
     
@@ -251,15 +289,20 @@
                 data.forEach((item, index) => {
                     const div = document.createElement('div');
                     div.className = 'suggestion-item';
-                    const addr = item.address;
                     
+                    const addr = item.address;
                     let street = addr.road || addr.street || addr.pedestrian || query;
                     let city = addr.city || addr.town || addr.village || '';
                     
-                    const userNumMatch = query.match(/\d+/);
+                    // בדיקה האם יש מספר בתוצאה
                     const apiHasNum = addr.house_number;
                     
+                    // בדיקה האם יש מספר בקלט המשתמש
+                    const userNumMatch = query.match(/\d+/);
+                    
                     let displayName = street;
+                    
+                    // אם המשתמש הקליד מספר אבל ה-API לא החזיר, נציג אותו
                     if (!apiHasNum && userNumMatch) {
                         displayName += " " + userNumMatch[0];
                     } else if (apiHasNum) {
@@ -268,35 +311,121 @@
 
                     div.innerHTML = `<div class="addr-main">${displayName}</div><div class="addr-sub">${city}</div>`;
                     
-                    div.onclick = () => selectAddress(item, displayName);
+                    div.onclick = () => selectAddress(item);
                     box.appendChild(div);
                 });
             } else { box.style.display = 'none'; topSuggestion = null; }
         } catch (e) {}
     }
 
-    function selectAddress(item, forcedName = null) {
+    function selectAddress(item) {
         const input = document.getElementById('addressInput');
         const box = document.getElementById('suggestions');
+        const currentVal = input.value;
         
-        if (forcedName) {
-            input.value = forcedName + ", " + (item.address.city || item.address.town || '');
-        } else {
-            const currentVal = input.value;
-            const userNum = currentVal.match(/\d+$/);
-            let finalName = item.address.road || item.address.street || currentVal;
-            if (!item.address.house_number && userNum) finalName += " " + userNum[0];
-            else if (item.address.house_number) finalName += " " + item.address.house_number;
-            input.value = finalName + ", " + (item.address.city || '');
+        // 1. קח את שם הרחוב מה-API
+        const addr = item.address;
+        let street = addr.road || addr.street || currentVal;
+        
+        // 2. בדוק אם יש מספר ב-API
+        let houseNum = addr.house_number;
+        
+        // 3. אם אין מספר ב-API, חפש אותו בקלט המקורי של המשתמש
+        if (!houseNum) {
+            const userNumMatch = currentVal.match(/\d+/);
+            if (userNumMatch) houseNum = userNumMatch[0];
         }
+        
+        // 4. בנה את הכתובת הסופית שתוצג ותשלח לוויז
+        let finalName = street;
+        if (houseNum) finalName += " " + houseNum;
+        if (addr.city) finalName += ", " + addr.city;
+        else if (addr.town) finalName += ", " + addr.town;
 
+        input.value = finalName;
+        
+        // שמירת קואורדינטות (אפילו אם הן של מרכז הרחוב)
         input.dataset.lat = item.lat;
         input.dataset.lng = item.lon;
+        
         box.style.display = 'none';
-        document.getElementById('custPhone').focus();
+        document.getElementById('pkgCount').focus();
     }
 
-    // --- חישוב סטטיסטיקות ---
+    // --- שאר הפונקציות ---
+    function updateAdminStats() {
+        if(locations.length === 0) {
+            document.getElementById('statCount').innerText = "0";
+            document.getElementById('statDrive').innerText = "0 דק'";
+            document.getElementById('statUnload').innerText = "0 דק'";
+            document.getElementById('statTotal').innerText = "00:00";
+            return;
+        }
+        
+        navigator.geolocation.getCurrentPosition((pos) => {
+            let prevLat = pos.coords.latitude;
+            let prevLng = pos.coords.longitude;
+            let totalDriveMinutes = 0;
+            let totalUnloadMinutes = locations.length * 15; 
+            
+            for (let i = 0; i < locations.length; i++) {
+                const dist = getDistance(prevLat, prevLng, locations[i].lat, locations[i].lng);
+                totalDriveMinutes += (dist / 30) * 60 * 1.2; 
+                prevLat = locations[i].lat; prevLng = locations[i].lng;
+            }
+
+            const totalMinutes = Math.round(totalDriveMinutes + totalUnloadMinutes);
+            const hours = Math.floor(totalMinutes / 60);
+            const mins = totalMinutes % 60;
+
+            document.getElementById('statCount').innerText = locations.length;
+            document.getElementById('statDrive').innerText = Math.round(totalDriveMinutes) + " דק'";
+            document.getElementById('statUnload').innerText = totalUnloadMinutes + " דק'";
+            
+            let endTime = new Date();
+            endTime.setMinutes(endTime.getMinutes() + totalMinutes);
+            document.getElementById('statTotal').innerText = `~${endTime.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} (${hours}ש ${mins}ד)`;
+        }, () => {
+            document.getElementById('statTotal').innerText = "נדרש מיקום";
+        });
+    }
+
+    function getDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371; 
+        const dLat = (lat2-lat1) * Math.PI/180;
+        const dLon = (lon2-lon1) * Math.PI/180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    function optimizeRouteForAdmin() {
+        if (locations.length < 2) return alert("נדרשות לפחות 2 נקודות");
+        let optimized = [locations[0]];
+        let unvisited = locations.slice(1);
+        while (unvisited.length > 0) {
+            let lastLoc = optimized[optimized.length - 1];
+            let closestIdx = 0;
+            let minDistance = Infinity;
+            for (let i = 0; i < unvisited.length; i++) {
+                let dist = getDistance(lastLoc.lat, lastLoc.lng, unvisited[i].lat, unvisited[i].lng);
+                if (dist < minDistance) { minDistance = dist; closestIdx = i; }
+            }
+            optimized.push(unvisited.splice(closestIdx, 1)[0]);
+        }
+        locations = optimized;
+        save(); updateUI(); updateAdminStats();
+        showToast("המסלול סודר בהצלחה! ⚡");
+    }
+
+    function startShift() {
+        const mPhone = document.getElementById('managerPhone').value.replace(/\D/g,'');
+        if(!mPhone) return alert("מספר מנהל לא הוגדר");
+        window.open(`https://wa.me/972${mPhone.startsWith('0')?mPhone.substring(1):mPhone}?text=${encodeURIComponent("אני מתחיל משמרת, לחץ לשיתוף מיקום חי")}`, '_blank');
+        document.getElementById('startShiftModal').style.display = 'none';
+        sessionStorage.setItem('shiftStarted', 'true');
+        calculateStatsFromLocation();
+    }
+
     function calculateStatsFromLocation() {
         if (!navigator.geolocation) {
             document.getElementById('statTotal').innerText = "ממתין למיקום...";
@@ -333,58 +462,29 @@
         }, (err) => { document.getElementById('statTotal').innerText = "אין גישת מיקום"; });
     }
 
-    function getDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371; 
-        const dLat = (lat2-lat1) * Math.PI/180;
-        const dLon = (lon2-lon1) * Math.PI/180;
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) * Math.sin(dLon/2) * Math.sin(dLon/2);
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    }
-
-    // --- שאר הפונקציות ---
-    function optimizeRouteForAdmin() {
-        if (locations.length < 2) return alert("נדרשות לפחות 2 נקודות");
-        let optimized = [locations[0]];
-        let unvisited = locations.slice(1);
-        while (unvisited.length > 0) {
-            let lastLoc = optimized[optimized.length - 1];
-            let closestIdx = 0;
-            let minDistance = Infinity;
-            for (let i = 0; i < unvisited.length; i++) {
-                let dist = getDistance(lastLoc.lat, lastLoc.lng, unvisited[i].lat, unvisited[i].lng);
-                if (dist < minDistance) { minDistance = dist; closestIdx = i; }
-            }
-            optimized.push(unvisited.splice(closestIdx, 1)[0]);
-        }
-        locations = optimized;
-        save(); updateUI(); calculateStatsFromLocation();
-        showToast("המסלול סודר בהצלחה! ⚡");
-    }
-
-    function startShift() {
-        const mPhone = document.getElementById('managerPhone').value.replace(/\D/g,'');
-        if(!mPhone) return alert("מספר מנהל לא הוגדר");
-        window.open(`https://wa.me/972${mPhone.startsWith('0')?mPhone.substring(1):mPhone}?text=${encodeURIComponent("אני מתחיל משמרת, לחץ לשיתוף מיקום חי")}`, '_blank');
-        document.getElementById('startShiftModal').style.display = 'none';
-        sessionStorage.setItem('shiftStarted', 'true');
-        calculateStatsFromLocation();
-    }
-
     function loadCustomerDatalist() { const list = document.getElementById('customerList'); list.innerHTML = ''; Object.keys(customers).sort().forEach(name => { const option = document.createElement('option'); option.value = name; list.appendChild(option); }); }
     function fillCustomerPhone() { const name = document.getElementById('custName').value; if (customers[name]) { const full = customers[name]; document.getElementById('phonePrefix').value = full.substring(0,3); document.getElementById('custPhone').value = full.substring(3); } }
     
     async function addNewLocation() {
         const input = document.getElementById('addressInput');
         let lat = input.dataset.lat, lng = input.dataset.lng;
-        if (!lat) {
+        
+        // אם לא נבחרה כתובת מהרשימה אבל יש טקסט
+        if (!lat && input.value.length > 3) {
             const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(input.value)}&limit=1`);
             const d = await res.json();
             if (d.length > 0) { lat = d[0].lat; lng = d[0].lon; }
-            else if(!confirm("לא נמצא מיקום. להוסיף?")) return;
+            else { 
+                // אפשר להוסיף גם אם אין קואורדינטות מדויקות (לניווט טקסטואלי בוויז)
+                if(!confirm("לא נמצאו קואורדינטות מדויקות. להוסיף בכל זאת?")) return;
+                lat = 32.0853; lng = 34.7818; // ברירת מחדל
+            }
         } 
+        
         const prefix = document.getElementById('phonePrefix').value;
         const num = document.getElementById('custPhone').value;
         const name = document.getElementById('custName').value;
+        const pkg = document.getElementById('pkgCount').value || 1;
         const idx = parseInt(document.getElementById('editIndex').value);
 
         if (name && num) { customers[name] = prefix + num; localStorage.setItem('cabasso_customers', JSON.stringify(customers)); loadCustomerDatalist(); }
@@ -392,6 +492,7 @@
         const newLoc = {
             name: input.value, custName: name || 'לקוח', orderId: document.getElementById('orderNum').value || '---',
             phone: num ? (prefix + num) : '', lat: parseFloat(lat||32), lng: parseFloat(lng||34),
+            packages: pkg,
             completed: false, reported: false, skipped: false, time: null
         };
 
@@ -400,10 +501,11 @@
         
         input.dataset.lat = ''; input.dataset.lng = '';
         ['addressInput','custName','orderNum','custPhone'].forEach(id => document.getElementById(id).value = '');
-        document.getElementById('custName').focus(); save(); updateUI(); calculateStatsFromLocation();
+        document.getElementById('pkgCount').value = 1;
+        document.getElementById('custName').focus(); save(); updateUI(); updateAdminStats();
     }
 
-    function initSortable() { const el = document.getElementById('addressList'); sortableInstance = Sortable.create(el, { handle: '.route-item', animation: 150, onEnd: function (evt) { const item = locations.splice(evt.oldIndex, 1)[0]; locations.splice(evt.newIndex, 0, item); save(); updateUI(); calculateStatsFromLocation(); } }); }
+    function initSortable() { const el = document.getElementById('addressList'); sortableInstance = Sortable.create(el, { handle: '.route-item', animation: 150, onEnd: function (evt) { const item = locations.splice(evt.oldIndex, 1)[0]; locations.splice(evt.newIndex, 0, item); save(); updateUI(); updateAdminStats(); } }); }
 
     function updateUI() {
         const list = document.getElementById('addressList'); list.innerHTML = '';
@@ -426,7 +528,7 @@
             const msg = encodeURIComponent(`💡 Cabasso Group\n📦 הזמנה: ${loc.orderId}\n👤 לקוח: ${loc.custName}\n📍 כתובת: ${loc.name}\n✅ סטטוס: נמסר!`);
             const waLink = `https://wa.me/972${mPhone.startsWith('0')?mPhone.substring(1):mPhone}?text=${msg}`;
             
-            // תצוגת Waze מדויקת לכתובת (שימוש בשם ולא בקואורדינטות)
+            // התיקון: שימוש בשם הכתובת המלא ל-Waze
             const wazeUrl = `https://waze.com/ul?q=${encodeURIComponent(loc.name)}&navigate=yes`;
 
             let statusText = 'ממתין';
@@ -442,12 +544,13 @@
                 <span class="badge ${loc.reported ? 'active' : ''}">${statusText}</span>
                 <div style="font-weight:700; font-size:1.1rem;">${i+1}. ${loc.custName} <span style="font-weight:400; font-size:0.9rem;">(#${loc.orderId})</span></div>
                 <div style="font-size:0.9rem; color:#666; margin-bottom:5px;">${loc.name}</div>
+                <div style="font-size:0.8rem; color:var(--brand); margin-bottom:5px; font-weight:bold;">📦 ${loc.packages || 1} אריזות</div>
                 ${loc.eta && !loc.completed && !loc.skipped ? `<div class="eta-badge">🕒 משוער: ${loc.eta}</div>` : ''}
                 
                 <div class="actions">
                     ${!loc.completed && !loc.skipped && (!isDriverMode || !isLocked) && !isEditMode ? `
                         <a href="${wazeUrl}" class="btn btn-waze">Waze</a>
-                        ${loc.phone.length > 3 ? `<a href="tel:${loc.phone}" class="btn btn-call">📞 חיוג</a>` : ''}
+                        ${loc.phone && loc.phone.length > 3 ? `<a href="tel:${loc.phone}" class="btn btn-call">📞 חיוג</a>` : ''}
                         <button onclick="openSignature(${i})" class="btn btn-done">סיום</button>
                         <button onclick="skipLocation(${i})" class="btn btn-skip">אין מענה</button>
                     ` : ''}
@@ -455,6 +558,7 @@
                 </div>
                 
                 <div class="edit-tools" style="${isEditMode ? 'display:flex' : 'display:none'}">
+                    <button onclick="printLabels(${i})" class="btn" style="background:#8e44ad; font-size:0.8rem; flex:1.5;">הדפס מדבקות 🖨️</button>
                     <button onclick="editItem(${i})" class="btn" style="background:#f39c12; font-size:0.8rem;">עריכה 📝</button>
                     <button onclick="deleteItem(${i})" class="btn" style="background:#c0392b; font-size:0.8rem;">מחיקה ❌</button>
                 </div>`;
@@ -463,6 +567,24 @@
             markers.push(L.marker([loc.lat, loc.lng], {icon}).addTo(map));
         });
         if (markers.length > 0) map.fitBounds(new L.featureGroup(markers).getBounds().pad(0.2));
+    }
+
+    function printLabels(index) {
+        const loc = locations[index];
+        const count = parseInt(loc.packages) || 1;
+        const printArea = document.getElementById('printSection');
+        printArea.innerHTML = '';
+        for(let i=1; i<=count; i++) {
+            printArea.innerHTML += `
+                <div class="label-sticker">
+                    <div class="label-logo">CABASSO GROUP</div>
+                    <div class="label-info"><strong>לקוח:</strong> ${loc.custName}</div>
+                    <div class="label-info"><strong>הזמנה:</strong> ${loc.orderId}</div>
+                    <div class="label-info" style="font-size:1rem;">${loc.name}</div>
+                    <div class="label-counter">${i} / ${count}</div>
+                </div>`;
+        }
+        window.print();
     }
 
     function reportDone(i) { locations[i].reported = true; locations[i].time = new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}); save(); calculateStatsFromLocation(); setTimeout(updateUI, 1500); }
@@ -490,12 +612,12 @@
     }
     
     function toggleEditMode() { isEditMode = !isEditMode; document.getElementById('editModeBtn').innerText = isEditMode ? "סיום עריכה ✅" : "עריכה ✏️"; document.getElementById('editModeBtn').style.background = isEditMode ? "var(--green)" : "#34495e"; if(isEditMode && sortableInstance) sortableInstance.option("disabled", true); else if(sortableInstance) sortableInstance.option("disabled", false); updateUI(); }
-    function editItem(i) { const loc = locations[i]; document.getElementById('custName').value = loc.custName; document.getElementById('orderNum').value = loc.orderId; document.getElementById('addressInput').value = loc.name; if(loc.phone) { document.getElementById('phonePrefix').value = loc.phone.substring(0,3); document.getElementById('custPhone').value = loc.phone.substring(3); } document.getElementById('editIndex').value = i; document.getElementById('addBtn').innerText = "שמור שינויים ✔️"; document.getElementById('addBtn').style.background = "var(--green)"; window.scrollTo({top:0, behavior:'smooth'}); }
+    function editItem(i) { const loc = locations[i]; document.getElementById('custName').value = loc.custName; document.getElementById('orderNum').value = loc.orderId; document.getElementById('addressInput').value = loc.name; document.getElementById('pkgCount').value = loc.packages || 1; if(loc.phone) { document.getElementById('phonePrefix').value = loc.phone.substring(0,3); document.getElementById('custPhone').value = loc.phone.substring(3); } document.getElementById('editIndex').value = i; document.getElementById('addBtn').innerText = "שמור שינויים ✔️"; document.getElementById('addBtn').style.background = "var(--green)"; window.scrollTo({top:0, behavior:'smooth'}); }
     function deleteItem(i) { if(confirm("למחוק?")) { locations.splice(i, 1); save(); updateUI(); calculateStatsFromLocation(); } }
     function clearAll() { if(confirm("לאפס?")) { locations = []; save(); updateUI(); calculateStatsFromLocation(); } }
     function showToast(msg) { const x = document.getElementById("toast"); x.innerText = msg; x.className = "show"; setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000); }
     async function generateShortLink() { if(locations.length===0) return showToast("ריק"); const encoded = btoa(encodeURIComponent(JSON.stringify(locations))); const longLink = window.location.origin + window.location.pathname + "?d=" + encoded; try { const res = await fetch(`https://is.gd/create.php?format=json&url=${encodeURIComponent(longLink)}`); const d = await res.json(); const link = d.shorturl || longLink; window.location.href = `https://wa.me/?text=${encodeURIComponent("מסלול חלוקה Cabasso: " + link)}`; } catch(e) { window.location.href = `https://wa.me/?text=${encodeURIComponent("מסלול חלוקה: " + longLink)}`; } }
-    function exportDailyReport() { let csv = "הזמנה,לקוח,כתובת,סטטוס,שעה\n"; locations.forEach(l => { let s = l.reported ? "בוצע" : (l.skipped ? "דילוג" : "טרם"); csv += `${l.orderId},${l.custName},"${l.name}",${s},${l.time||'-'}\n`; }); const blob = new Blob(["\ufeff"+csv], {type:'text/csv;charset=utf-8;'}); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `Report_${new Date().toLocaleDateString().replace(/\//g,'-')}.csv`; link.click(); }
+    function exportDailyReport() { let csv = "הזמנה,לקוח,כתובת,אריזות,סטטוס,שעה\n"; locations.forEach(l => { let s = l.reported ? "בוצע" : (l.skipped ? "דילוג" : "טרם"); csv += `${l.orderId},${l.custName},"${l.name}",${l.packages||1},${s},${l.time||'-'}\n`; }); const blob = new Blob(["\ufeff"+csv], {type:'text/csv;charset=utf-8;'}); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `Report_${new Date().toLocaleDateString().replace(/\//g,'-')}.csv`; link.click(); }
 </script>
 </body>
 </html>
