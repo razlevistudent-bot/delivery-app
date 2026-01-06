@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cabasso Group | Final Clight Logistics</title>
+    <title>Cabasso Group | Smart Logistics</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;700&display=swap" rel="stylesheet">
     <style>
         :root { --brand: #1a1a1a; --gold: #c5a059; --bg: #f4f4f4; --white: #fff; --green: #27ae60; --locked: #bdc3c7; }
-        body { font-family: 'Assistant', sans-serif; background: var(--bg); margin: 0; padding: 10px; direction: rtl; color: var(--brand); }
+        body { font-family: 'Assistant', sans-serif; background: var(--bg); margin: 0; padding: 10px; direction: rtl; color: var(--brand); overflow-x: hidden; }
         .container { max-width: 500px; margin: 0 auto; }
         header { text-align: center; padding: 15px; background: var(--brand); color: var(--gold); border-radius: 15px; margin-bottom: 10px; border-bottom: 3px solid var(--gold); }
         .glass-card { background: var(--white); border-radius: 15px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 10px; }
+        label { display: block; margin-bottom: 5px; font-size: 0.8rem; font-weight: bold; }
         input, select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; font-size: 16px; }
         .phone-group { display: flex; gap: 8px; direction: ltr; }
         .phone-group select { flex: 0.35; } .phone-group input { flex: 0.65; text-align: left; }
@@ -21,14 +22,25 @@
         .route-item.is-completed { border-right-color: var(--green); background: #f0fdf4; }
         .actions { display: flex; gap: 8px; margin-top: 10px; }
         .btn { flex: 1; text-align: center; padding: 12px; border-radius: 8px; color: white; text-decoration: none; font-size: 0.9rem; font-weight: bold; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .btn-waze { background: #33ccff; } .btn-call { background: #555; } .btn-done { background: var(--brand); color: var(--gold); }
+        .btn-waze { background: #33ccff; } 
+        /* כפתור חיוג בירוק */
+        .btn-call { background: var(--green); } 
+        .btn-done { background: var(--brand); color: var(--gold); }
         .btn-whatsapp { background: var(--green); width: 100%; margin-top: 10px; }
         .btn-share { background: #007bff; color: white; width: 100%; margin-top: 5px; }
+        .btn-opt { background: var(--gold); color: black; margin-bottom: 10px; }
         
-        .modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); align-items: center; justify-content: center; padding: 10px; }
-        .modal-content { background: white; padding: 20px; border-radius: 15px; width: 100%; text-align: center; }
-        #signature-pad { border: 2px solid #ddd; background: #fafafa; touch-action: none; width: 100%; height: 200px; border-radius: 8px; }
+        /* כפתורי ניהול מנהל */
+        .admin-actions { display: flex; gap: 5px; margin-top: 5px; }
+        .btn-reset { background: #e74c3c; font-size: 0.8rem; }
+        .btn-refresh { background: #34495e; font-size: 0.8rem; }
+
+        #signature-pad { border: 2px dashed #ccc; background: #fff; touch-action: none; width: 100%; height: 150px; border-radius: 8px; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
+        .modal-content { background: white; padding: 20px; border-radius: 15px; width: 100%; max-width: 400px; text-align: center; }
+        
         .number-marker { background: var(--brand); color: var(--gold); border: 2px solid var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; }
+        .badge { font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; background: #eee; display: inline-block; margin-bottom: 5px; }
     </style>
 </head>
 <body>
@@ -41,7 +53,7 @@
 
     <div class="glass-card" style="background: #222; color: white;">
         <label style="font-size: 0.7rem; color: #aaa;">מספר מנהל לדיווח:</label>
-        <input type="tel" id="managerPhone" placeholder="0501234567" onchange="localStorage.setItem('manager_num', this.value)" style="background:#333; color:white; border:none;">
+        <input type="tel" id="managerPhone" placeholder="0501234567" onchange="saveManager()" style="background:#333; color:white; border:none;">
     </div>
 
     <div id="admin-panel" class="glass-card">
@@ -49,24 +61,33 @@
         <input type="text" id="orderNum" placeholder="הזמנה #">
         <input type="text" id="addressInput" placeholder="כתובת מלאה">
         <div class="phone-group">
-            <select id="phonePrefix"><option value="050">050</option><option value="052">052</option><option value="054">054</option><option value="053">053</option><option value="058">058</option></select>
+            <select id="phonePrefix">
+                <option value="050">050</option><option value="052">052</option><option value="054">054</option>
+                <option value="053">053</option><option value="058">058</option>
+            </select>
             <input type="tel" id="custPhone" placeholder="7 ספרות" maxlength="7">
         </div>
-        <button onclick="addNewLocation()" class="btn" style="background:var(--brand); color:var(--gold); width:100%;">הוסף למסלול +</button>
+        <button onclick="addNewLocation()" class="btn" style="background:var(--brand); color:var(--gold); width:100%; margin-bottom:5px;">הוסף למסלול +</button>
         <button onclick="generateShortLink()" class="btn btn-share">שתף מסלול לנהג 📲</button>
+        
+        <div class="admin-actions">
+            <button onclick="clearAll()" class="btn btn-reset">איפוס רשימה 🗑️</button>
+            <button onclick="updateUI()" class="btn btn-refresh">עדכון רשימה 🔄</button>
+        </div>
     </div>
 
+    <button id="optBtn" onclick="optimizeForDriver()" class="btn btn-opt" style="display:none; width:100%;">סדר מסלול חכם 🚀</button>
     <div id="map"></div>
     <div id="addressList"></div>
 </div>
 
 <div id="signatureModal" class="modal">
     <div class="modal-content">
-        <h3>חתימת לקוח לאישור מסירה</h3>
+        <h3>חתימת לקוח לאישור</h3>
         <canvas id="signature-pad"></canvas>
-        <div class="actions">
-            <button onclick="clearPad()" class="btn" style="background:#888;">נקה</button>
-            <button onclick="confirmDelivery()" class="btn" style="background:var(--green);">אשר חתימה וסיים</button>
+        <div class="actions" style="margin-top:10px;">
+            <button onclick="clearSignature()" class="btn" style="background:#888;">נקה</button>
+            <button onclick="saveSignature()" class="btn" style="background:var(--green);">אישור חתימה</button>
         </div>
     </div>
 </div>
@@ -77,31 +98,45 @@
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
     var locations = [];
     var markers = [];
-    var currentIdx = null;
+    var currentSignIndex = null;
 
     const canvas = document.getElementById('signature-pad');
     const ctx = canvas.getContext('2d');
     let drawing = false;
 
-    function getPos(e) {
-        const rect = canvas.getBoundingClientRect();
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        return { x: clientX - rect.left, y: clientY - rect.top };
-    }
-    canvas.addEventListener('mousedown', (e) => { drawing = true; ctx.moveTo(getPos(e).x, getPos(e).y); });
-    canvas.addEventListener('mousemove', (e) => { if(!drawing) return; ctx.lineTo(getPos(e).x, getPos(e).y); ctx.stroke(); });
-    canvas.addEventListener('mouseup', () => drawing = false);
-    canvas.addEventListener('touchstart', (e) => { drawing = true; const p = getPos(e); ctx.moveTo(p.x, p.y); e.preventDefault(); });
-    canvas.addEventListener('touchmove', (e) => { if(!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); e.preventDefault(); });
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDraw);
+    canvas.addEventListener('touchstart', startDraw);
+    canvas.addEventListener('touchmove', draw);
+    canvas.addEventListener('touchend', stopDraw);
 
-    function clearPad() { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.beginPath(); }
+    function startDraw(e) { drawing = true; draw(e); }
+    function stopDraw() { drawing = false; ctx.beginPath(); }
+    function draw(e) {
+        if (!drawing) return;
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+        const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#000';
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        ctx.moveTo(x, y);
+    }
+
+    function encodeData(data) { return btoa(encodeURIComponent(JSON.stringify(data))); }
+    function decodeData(str) { return JSON.parse(decodeURIComponent(atob(str))); }
 
     window.onload = function() {
-        const data = new URLSearchParams(window.location.search).get('d');
-        if(data) {
+        const urlParams = new URLSearchParams(window.location.search);
+        const dataParam = urlParams.get('d');
+        if (dataParam) {
             document.getElementById('admin-panel').style.display = 'none';
-            locations = JSON.parse(decodeURIComponent(atob(data)));
+            document.getElementById('optBtn').style.display = 'block';
+            locations = decodeData(dataParam);
         } else {
             locations = JSON.parse(localStorage.getItem('cabasso_strict')) || [];
         }
@@ -109,48 +144,75 @@
         updateUI();
     };
 
+    function saveManager() { localStorage.setItem('manager_num', document.getElementById('managerPhone').value); }
+
     async function addNewLocation() {
         const addr = document.getElementById('addressInput').value;
+        if(!addr) return;
         const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}&limit=1`);
-        const d = await res.json();
-        if(d.length > 0) {
+        const data = await res.json();
+        if (data.length > 0) {
+            const prefix = document.getElementById('phonePrefix').value;
+            const num = document.getElementById('custPhone').value;
             locations.push({
                 name: addr, custName: document.getElementById('custName').value || 'לקוח',
                 orderId: document.getElementById('orderNum').value || '---',
-                phone: document.getElementById('phonePrefix').value + document.getElementById('custPhone').value,
-                lat: parseFloat(d[0].lat), lng: parseFloat(d[0].lon), completed: false, reported: false
+                phone: num ? (prefix + num) : '',
+                lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon),
+                completed: false, reported: false
             });
             localStorage.setItem('cabasso_strict', JSON.stringify(locations));
             updateUI();
+            ['addressInput','custName','orderNum','custPhone'].forEach(id => document.getElementById(id).value = '');
+        }
+    }
+
+    async function generateShortLink() {
+        if (locations.length === 0) return alert("אין כתובות");
+        const encoded = encodeData(locations);
+        const longLink = window.location.origin + window.location.pathname + "?d=" + encoded;
+        try {
+            const res = await fetch(`https://is.gd/create.php?format=json&url=${encodeURIComponent(longLink)}`);
+            const data = await res.json();
+            const finalLink = data.shorturl || longLink;
+            window.location.href = `https://wa.me/?text=${encodeURIComponent("מסלול חלוקה Cabasso: " + finalLink)}`;
+        } catch (e) {
+            window.location.href = `https://wa.me/?text=${encodeURIComponent("מסלול חלוקה: " + longLink)}`;
         }
     }
 
     function updateUI() {
-        const list = document.getElementById('addressList'); list.innerHTML = '';
-        markers.forEach(m => map.removeLayer(m)); markers = [];
-        let activeFound = false;
+        const list = document.getElementById('addressList');
+        list.innerHTML = '';
+        markers.forEach(m => map.removeLayer(m));
+        markers = [];
+        let foundActive = false;
 
         locations.forEach((loc, i) => {
-            let locked = activeFound && !loc.reported;
-            if(!loc.reported) activeFound = true;
+            let isLocked = foundActive && !loc.reported;
+            if (!loc.reported) foundActive = true;
 
             const item = document.createElement('div');
-            item.className = `route-item ${loc.reported ? 'is-completed' : ''} ${locked ? 'is-locked' : ''}`;
-            const mPhone = document.getElementById('managerPhone').value;
-            const msg = encodeURIComponent(`💡 Cabasso Group\n✅ משלוח נמסר!\n📦 הזמנה: ${loc.orderId}\n👤 לקוח: ${loc.custName}\n📍 כתובת: ${loc.name}`);
+            item.className = `route-item ${loc.reported ? 'is-completed' : ''} ${isLocked ? 'is-locked' : ''}`;
             
+            const managerNum = document.getElementById('managerPhone').value.replace(/\D/g,'');
+            const reportMsg = encodeURIComponent(`💡 קבוצת קבסו - דו"ח חלוקה\n📦 הזמנה: ${loc.orderId}\n👤 לקוח: ${loc.custName}\n📍 כתובת: ${loc.name}\n✅ נמסר ונחתם!`);
+            const reportUrl = `https://wa.me/972${managerNum.startsWith('0') ? managerNum.substring(1) : managerNum}?text=${reportMsg}`;
+
             item.innerHTML = `
+                <span class="badge">${loc.reported ? 'נמסר' : (isLocked ? '🔒 נעול' : '🚚 בטיפול')}</span>
                 <div style="font-weight:bold;">${i+1}. ${loc.custName} (#${loc.orderId})</div>
-                <div style="font-size:0.8rem;">${loc.name}</div>
+                <div style="font-size:0.85rem;">${loc.name}</div>
                 <div class="actions">
-                    ${!loc.completed && !locked ? `
+                    ${!loc.completed && !isLocked ? `
                         <a href="https://waze.com/ul?ll=${loc.lat},${loc.lng}&navigate=yes" class="btn btn-waze">Waze</a>
-                        ${loc.phone ? `<a href="tel:${loc.phone}" class="btn btn-call">חיוג</a>` : ''}
-                        <button onclick="currentIdx=${i}; document.getElementById('signatureModal').style.display='flex'; clearPad();" class="btn btn-done">סיום</button>
+                        ${loc.phone && loc.phone.length > 3 ? `<a href="tel:${loc.phone}" class="btn btn-call">חיוג</a>` : ''}
+                        <button onclick="openSignature(${i})" class="btn btn-done">סיימתי וחתימה</button>
                     ` : ''}
-                    ${loc.completed && !loc.reported ? `<a href="https://wa.me/972${mPhone.substring(1)}?text=${msg}" target="_blank" class="btn btn-whatsapp" onclick="locations[${i}].reported=true; updateUI();">דווח למנהל 🔓</a>` : ''}
-                </div>
-            `;
+                    ${loc.completed && !loc.reported ? `
+                        <a href="${reportUrl}" target="_blank" class="btn btn-whatsapp" onclick="locations[${i}].reported=true; updateUI();">שלח דיווח למנהל 🔓</a>
+                    ` : ''}
+                </div>`;
             list.appendChild(item);
             const icon = L.divIcon({ className: 'number-marker', html: i + 1, iconSize: [25, 25] });
             markers.push(L.marker([loc.lat, loc.lng], {icon}).addTo(map));
@@ -158,17 +220,48 @@
         if(markers.length > 0) map.fitBounds(new L.featureGroup(markers).getBounds().pad(0.2));
     }
 
-    function confirmDelivery() {
-        locations[currentIdx].completed = true;
+    function openSignature(i) {
+        currentSignIndex = i;
+        document.getElementById('signatureModal').style.display = 'flex';
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function clearSignature() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+
+    function saveSignature() {
+        locations[currentSignIndex].completed = true;
         document.getElementById('signatureModal').style.display = 'none';
         updateUI();
     }
 
-    async function generateShortLink() {
-        const longUrl = window.location.origin + window.location.pathname + "?d=" + btoa(encodeURIComponent(JSON.stringify(locations)));
-        const res = await fetch(`https://is.gd/create.php?format=json&url=${encodeURIComponent(longUrl)}`);
-        const d = await res.json();
-        window.location.href = `https://wa.me/?text=${encodeURIComponent("מסלול חלוקה קבסו: " + (d.shorturl || longUrl))}`;
+    function optimizeForDriver() {
+        navigator.geolocation.getCurrentPosition(pos => {
+            const uLat = pos.coords.latitude, uLng = pos.coords.longitude;
+            let unvisited = locations.filter(l => !l.reported);
+            let done = locations.filter(l => l.reported);
+            let optimized = [];
+            let cLat = uLat, cLng = uLng;
+            while (unvisited.length > 0) {
+                let closestIdx = 0, minDist = Infinity;
+                unvisited.forEach((loc, idx) => {
+                    let d = Math.sqrt(Math.pow(loc.lat-cLat, 2)+Math.pow(loc.lng-cLng, 2));
+                    if(d < minDist) { minDist = d; closestIdx = idx; }
+                });
+                let next = unvisited.splice(closestIdx, 1)[0];
+                optimized.push(next);
+                cLat = next.lat; cLng = next.lng;
+            }
+            locations = [...done, ...optimized];
+            updateUI();
+        });
+    }
+
+    function clearAll() { 
+        if(confirm("האם למחוק את כל רשימת החלוקה?")) { 
+            locations = []; 
+            localStorage.setItem('cabasso_strict', JSON.stringify([])); 
+            updateUI(); 
+        } 
     }
 </script>
 </body>
