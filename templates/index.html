@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cabasso Group | Pro Logistics</title>
+    <title>Cabasso Group | Smart Logistics</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
@@ -20,130 +20,64 @@
             --shadow: 0 8px 30px rgba(0,0,0,0.08);
         }
         
-        body { 
-            font-family: 'Assistant', sans-serif; 
-            background: var(--bg); 
-            margin: 0; padding: 15px; 
-            direction: rtl; 
-            color: var(--brand); 
-            overflow-x: hidden; 
-            padding-bottom: 80px;
-        }
-
+        body { font-family: 'Assistant', sans-serif; background: var(--bg); margin: 0; padding: 15px; direction: rtl; color: var(--brand); overflow-x: hidden; padding-bottom: 80px; }
         .container { max-width: 600px; margin: 0 auto; }
         
-        header { 
-            text-align: center; 
-            padding: 20px; 
-            background: linear-gradient(135deg, var(--brand) 0%, #333 100%); 
-            color: var(--gold); 
-            border-radius: 16px; 
-            margin-bottom: 20px; 
-            box-shadow: var(--shadow);
-            position: relative;
-            overflow: hidden;
-        }
+        header { text-align: center; padding: 20px; background: linear-gradient(135deg, var(--brand) 0%, #333 100%); color: var(--gold); border-radius: 16px; margin-bottom: 20px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
         header::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: var(--gold); }
         
-        .glass-card { 
-            background: var(--white); 
-            border-radius: 16px; 
-            padding: 20px; 
-            box-shadow: var(--shadow); 
-            margin-bottom: 15px; 
-            border: 1px solid rgba(0,0,0,0.03);
-        }
+        .glass-card { background: var(--white); border-radius: 16px; padding: 20px; box-shadow: var(--shadow); margin-bottom: 15px; border: 1px solid rgba(0,0,0,0.03); }
         
         label { display: block; margin-bottom: 6px; font-size: 0.85rem; font-weight: 600; color: #555; }
-        input, select { 
-            width: 100%; padding: 14px; border: 1px solid #eee; border-radius: 10px; 
-            margin-bottom: 12px; box-sizing: border-box; font-size: 16px; background: #fdfdfd;
-            transition: 0.3s;
-        }
+        input, select { width: 100%; padding: 14px; border: 1px solid #eee; border-radius: 10px; margin-bottom: 12px; box-sizing: border-box; font-size: 16px; background: #fdfdfd; transition: 0.3s; }
         input:focus { border-color: var(--gold); outline: none; background: #fff; }
 
         .phone-group { display: flex; gap: 10px; direction: ltr; }
-        .phone-group select { flex: 0.35; } 
-        .phone-group input { flex: 0.65; text-align: left; }
+        .phone-group select { flex: 0.35; } .phone-group input { flex: 0.65; text-align: left; }
 
         #map { height: 220px; border-radius: 16px; margin-bottom: 15px; z-index: 1; border: 2px solid white; box-shadow: var(--shadow); }
         
-        /* רשימת הכתובות */
-        .route-item { 
-            background: var(--white); padding: 18px; border-radius: 14px; margin-bottom: 12px; 
-            border-right: 5px solid var(--gold); position: relative; 
-            transition: transform 0.2s, box-shadow 0.2s;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
-        }
-        
-        /* סימון לתחנה הפעילה כרגע */
-        .route-item.active-now {
-            border: 2px solid var(--gold);
-            transform: scale(1.02);
-            box-shadow: 0 10px 25px rgba(197, 160, 89, 0.2);
-            animation: pulse-border 2s infinite;
-        }
-
+        .route-item { background: var(--white); padding: 18px; border-radius: 14px; margin-bottom: 12px; border-right: 5px solid var(--gold); position: relative; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 2px 10px rgba(0,0,0,0.03); }
+        .route-item.active-now { border: 2px solid var(--gold); transform: scale(1.02); box-shadow: 0 10px 25px rgba(197, 160, 89, 0.2); animation: pulse-border 2s infinite; }
         .route-item.is-locked { opacity: 0.5; filter: grayscale(1); pointer-events: none; border-right-color: var(--locked); background: #f9f9f9; }
         .route-item.is-completed { border-right-color: var(--green); background: #f0fff4; opacity: 0.8; }
         .route-item.is-skipped { border-right-color: var(--red); background: #fff5f5; opacity: 0.8; }
 
-        /* כפתורים */
         .actions { display: flex; gap: 8px; margin-top: 15px; flex-wrap: wrap; }
-        .btn { 
-            flex: 1; text-align: center; padding: 12px; border-radius: 10px; color: white; 
-            font-size: 0.9rem; font-weight: 600; border: none; cursor: pointer; 
-            display: flex; align-items: center; justify-content: center; gap: 6px;
-            transition: 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
+        .btn { flex: 1; text-align: center; padding: 12px; border-radius: 10px; color: white; font-size: 0.9rem; font-weight: 600; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .btn:active { transform: translateY(2px); }
         
-        .btn-waze { background: #33ccff; } 
-        .btn-call { background: var(--green); flex: 0.4; } 
-        .btn-done { background: var(--brand); color: var(--gold); }
+        .btn-waze { background: #33ccff; } .btn-call { background: var(--green); flex: 0.4; } .btn-done { background: var(--brand); color: var(--gold); }
         .btn-skip { background: #95a5a6; font-size: 0.8rem; flex: 0.4; }
         .btn-whatsapp { background: var(--green); width: 100%; margin-top: 10px; }
         .btn-share { background: #2980b9; width: 100%; margin-top: 8px; }
         .btn-opt { background: linear-gradient(45deg, var(--gold), #e0b66b); color: black; margin-bottom: 15px; width:100%; border:none; padding:15px; font-size:1.1rem; }
+        .btn-export { background: #34495e; width: 100%; margin-top: 20px; font-size: 0.85rem; }
         
-        /* כלי ניהול */
         .admin-actions { display: flex; gap: 10px; margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee; }
         .btn-reset { background: var(--red); opacity: 0.8; }
         .btn-refresh { background: #34495e; }
         .edit-tools { display: none; gap: 8px; margin-top: 10px; }
         
-        /* השלמה אוטומטית */
-        .suggestions-box { 
-            position: absolute; background: white; border: 1px solid #ddd; width: calc(100% - 40px); 
-            z-index: 1000; max-height: 200px; overflow-y: auto; border-radius: 0 0 10px 10px; 
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1); display: none;
-        }
-        .suggestion-item { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 0.9rem; }
+        /* Box suggestions style */
+        .suggestions-box { position: absolute; background: white; border: 1px solid #ddd; width: calc(100% - 40px); z-index: 1000; max-height: 200px; overflow-y: auto; border-radius: 0 0 10px 10px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); display: none; }
+        .suggestion-item { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 0.9rem; display: flex; justify-content: space-between; }
         .suggestion-item:hover { background: #f9f9f9; }
+        .suggestion-number { background: var(--gold); color: black; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
 
-        /* Toast Notification */
-        #toast {
-            visibility: hidden; min-width: 250px; background-color: #333; color: #fff;
-            text-align: center; border-radius: 50px; padding: 16px; position: fixed;
-            z-index: 9999; left: 50%; bottom: 30px; transform: translateX(-50%);
-            font-size: 1rem; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        }
+        /* Toast */
+        #toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 50px; padding: 16px; position: fixed; z-index: 9999; left: 50%; bottom: 30px; transform: translateX(-50%); font-size: 1rem; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
         #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
-
         @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
         @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
         @keyframes pulse-border { 0% { box-shadow: 0 0 0 0 rgba(197, 160, 89, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(197, 160, 89, 0); } 100% { box-shadow: 0 0 0 0 rgba(197, 160, 89, 0); } }
 
-        /* מודל חתימה */
         .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; backdrop-filter: blur(5px); }
         .modal-content { background: white; padding: 25px; border-radius: 20px; width: 90%; max-width: 400px; text-align: center; }
         #signature-pad { border: 2px dashed #ccc; background: #fdfdfd; touch-action: none; width: 100%; height: 180px; border-radius: 12px; margin: 15px 0; }
-        
         .number-marker { background: var(--brand); color: var(--gold); border: 2px solid var(--gold); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; }
         .badge { font-size: 0.7rem; padding: 4px 10px; border-radius: 20px; background: #eee; display: inline-block; margin-bottom: 8px; font-weight: bold; }
         .badge.active { background: var(--gold); color: black; }
-        
-        /* אייקון גרירה */
         .drag-handle { float: left; color: #ccc; cursor: grab; padding: 0 10px; font-size: 1.2rem; }
     </style>
 </head>
@@ -169,7 +103,7 @@
         </div>
 
         <div style="position: relative;">
-            <label>כתובת (התחל להקליד לחיפוש)</label>
+            <label>כתובת (התחל להקליד לחיפוש מדויק)</label>
             <input type="text" id="addressInput" placeholder="רחוב, מספר ועיר" oninput="debounceSearch()">
             <div id="suggestions" class="suggestions-box"></div>
         </div>
@@ -187,20 +121,19 @@
             <button onclick="clearAll()" class="btn btn-reset">איפוס 🗑️</button>
             <button onclick="toggleEditMode()" id="editModeBtn" class="btn btn-refresh">עריכה ✏️</button>
         </div>
-        <div style="text-align:center; margin-top:10px; font-size:0.8rem; color:#999;">* ניתן לגרור את הכרטיסים לשינוי סדר</div>
+        <div style="text-align:center; margin-top:10px; font-size:0.8rem; color:#999;">* ניתן לגרור כרטיסים לסידור מחדש</div>
     </div>
 
     <button id="optBtn" onclick="optimizeForDriver()" class="btn btn-opt" style="display:none;">📍 סדר מסלול חכם לפי מיקום</button>
     
     <div id="map"></div>
     <div id="addressList"></div>
-    <button onclick="exportDailyReport()" class="btn btn-refresh" style="width: 100%; margin-top:20px;">הורד דוח יומי (Excel) 📊</button>
+    <button onclick="exportDailyReport()" class="btn btn-export">הורד דוח יומי (Excel) 📊</button>
 </div>
 
 <div id="signatureModal" class="modal">
     <div class="modal-content">
         <h3>חתימת מקבל</h3>
-        <p style="font-size:0.8rem; color:#666;">יש לחתום בתוך המסגרת</p>
         <canvas id="signature-pad"></canvas>
         <div class="actions">
             <button onclick="clearSignature()" class="btn" style="background:#888;">נקה</button>
@@ -213,39 +146,33 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    // --- משתנים גלובליים ---
     var map = L.map('map').setView([32.0853, 34.7818], 10);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
     var locations = [];
     var markers = [];
     var currentSignIndex = null;
     var isEditMode = false;
-    var sortableInstance = null; // למנגנון הגרירה
+    var sortableInstance = null;
 
-    // --- אתחול חתימה ---
     const canvas = document.getElementById('signature-pad');
     const ctx = canvas.getContext('2d');
     let drawing = false;
-    // (קוד חתימה זהה לקודם - הושמט לקצר, אך קיים בפועל בלוגיקה)
     function getPos(e) { const r = canvas.getBoundingClientRect(); const x = (e.touches?e.touches[0].clientX:e.clientX)-r.left; const y = (e.touches?e.touches[0].clientY:e.clientY)-r.top; return {x,y}; }
     ['mousedown','touchstart'].forEach(ev=>canvas.addEventListener(ev,e=>{drawing=true;ctx.moveTo(getPos(e).x,getPos(e).y);}));
     ['mousemove','touchmove'].forEach(ev=>{canvas.addEventListener(ev,e=>{if(drawing){e.preventDefault();ctx.lineTo(getPos(e).x,getPos(e).y);ctx.stroke();}});});
     ['mouseup','touchend'].forEach(ev=>drawing=false);
 
-    // --- טעינה ראשונית ---
     window.onload = function() {
         const urlParams = new URLSearchParams(window.location.search);
         const dataParam = urlParams.get('d');
         if (dataParam) {
-            // מצב נהג
             document.getElementById('admin-panel').style.display = 'none';
             document.getElementById('optBtn').style.display = 'block';
             document.getElementById('mode-text').innerText = "מצב נהג - חלוקה פעילה";
             try { locations = JSON.parse(decodeURIComponent(atob(dataParam))); } catch(e){}
         } else {
-            // מצב מנהל
             locations = JSON.parse(localStorage.getItem('cabasso_pro')) || [];
-            initSortable(); // הפעלת הגרירה
+            initSortable();
         }
         document.getElementById('managerPhone').value = localStorage.getItem('manager_num') || '';
         updateUI();
@@ -254,12 +181,9 @@
     function save() { localStorage.setItem('cabasso_pro', JSON.stringify(locations)); }
     function saveManager() { localStorage.setItem('manager_num', document.getElementById('managerPhone').value); }
 
-    // --- השלמה אוטומטית (Autocomplete) ---
+    // --- חיפוש כתובות מדויק משופר ---
     let debounceTimer;
-    function debounceSearch() {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(searchAddress, 300);
-    }
+    function debounceSearch() { clearTimeout(debounceTimer); debounceTimer = setTimeout(searchAddress, 300); }
 
     async function searchAddress() {
         const query = document.getElementById('addressInput').value;
@@ -270,16 +194,30 @@
             const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1&countrycodes=il`);
             const data = await res.json();
             box.innerHTML = '';
+            
             if (data.length > 0) {
                 box.style.display = 'block';
                 data.forEach(item => {
                     const div = document.createElement('div');
                     div.className = 'suggestion-item';
-                    // הצגה יפה יותר של הכתובת
-                    let display = item.display_name.split(',').slice(0, 3).join(','); 
-                    div.innerText = display;
+                    
+                    // בניית כתובת יפה ומדויקת
+                    const addr = item.address;
+                    let street = addr.road || addr.street || addr.pedestrian || '';
+                    let number = addr.house_number || '';
+                    let city = addr.city || addr.town || addr.village || '';
+                    
+                    let displayText = street;
+                    if(number) displayText += " " + number;
+                    if(city) displayText += ", " + city;
+                    
+                    // אם אין מידע מובנה, השתמש בשם הכללי
+                    if(displayText.length < 3) displayText = item.display_name.split(',').slice(0,3).join(',');
+
+                    div.innerHTML = `<span>${displayText}</span> ${number ? '<span class="suggestion-number">'+number+'</span>' : ''}`;
+                    
                     div.onclick = () => {
-                        document.getElementById('addressInput').value = display;
+                        document.getElementById('addressInput').value = displayText;
                         document.getElementById('addressInput').dataset.lat = item.lat;
                         document.getElementById('addressInput').dataset.lng = item.lon;
                         box.style.display = 'none';
@@ -290,13 +228,11 @@
         } catch (e) {}
     }
 
-    // --- הוספה / עריכה ---
     async function addNewLocation() {
         const input = document.getElementById('addressInput');
         let lat = input.dataset.lat;
         let lng = input.dataset.lng;
         
-        // אם לא נבחר מהרשימה, נחפש רגיל
         if (!lat) {
             const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(input.value)}&limit=1`);
             const data = await res.json();
@@ -328,25 +264,14 @@
             showToast("נוסף לרשימה!");
         }
         
-        input.dataset.lat = ''; input.dataset.lng = ''; // איפוס
+        input.dataset.lat = ''; input.dataset.lng = '';
         save(); updateUI();
         ['addressInput','custName','orderNum','custPhone'].forEach(id => document.getElementById(id).value = '');
     }
 
-    // --- גרירה וסידור מחדש ---
     function initSortable() {
         const el = document.getElementById('addressList');
-        sortableInstance = Sortable.create(el, {
-            handle: '.route-item', // כל הכרטיס גריר
-            animation: 150,
-            onEnd: function (evt) {
-                // עדכון המערך לפי הסדר החדש ב-DOM
-                const item = locations.splice(evt.oldIndex, 1)[0];
-                locations.splice(evt.newIndex, 0, item);
-                save();
-                updateUI(); // רינדור מחדש כדי לסדר מספרים
-            }
-        });
+        sortableInstance = Sortable.create(el, { handle: '.route-item', animation: 150, onEnd: function (evt) { const item = locations.splice(evt.oldIndex, 1)[0]; locations.splice(evt.newIndex, 0, item); save(); updateUI(); } });
     }
 
     function updateUI() {
@@ -357,19 +282,16 @@
 
         locations.forEach((loc, i) => {
             let isLocked = foundActive && !loc.reported && !loc.skipped;
-            // התחנה הפעילה היא הראשונה שטרם טופלה
             let isActive = !foundActive && !loc.reported && !loc.skipped;
             if (!loc.reported && !loc.skipped) foundActive = true;
 
             const item = document.createElement('div');
             item.className = `route-item ${loc.reported ? 'is-completed' : ''} ${loc.skipped ? 'is-skipped' : ''} ${isLocked ? 'is-locked' : ''} ${isActive ? 'active-now' : ''}`;
             
-            // בניית הודעת ווטסאפ
             const mPhone = document.getElementById('managerPhone').value.replace(/\D/g,'');
             const msg = encodeURIComponent(`💡 Cabasso Group\n📦 הזמנה: ${loc.orderId}\n👤 לקוח: ${loc.custName}\n📍 כתובת: ${loc.name}\n✅ סטטוס: נמסר!`);
             const waLink = `https://wa.me/972${mPhone.startsWith('0')?mPhone.substring(1):mPhone}?text=${msg}`;
 
-            // תגית סטטוס
             let statusText = 'ממתין';
             let statusClass = '';
             if (loc.reported) { statusText = 'נמסר: ' + loc.time; statusClass = 'active'; }
@@ -386,7 +308,7 @@
                 <div class="actions">
                     ${!loc.completed && !loc.skipped && !isLocked && !isEditMode ? `
                         <a href="https://waze.com/ul?ll=${loc.lat},${loc.lng}&navigate=yes" class="btn btn-waze">Waze</a>
-                        ${loc.phone && loc.phone.length > 3 ? `<a href="tel:${loc.phone}" class="btn btn-call">📞</a>` : ''}
+                        ${loc.phone && loc.phone.length > 3 ? `<a href="tel:${loc.phone}" class="btn btn-call">📞 חיוג</a>` : ''}
                         <button onclick="openSignature(${i})" class="btn btn-done">סיום</button>
                         <button onclick="skipLocation(${i})" class="btn btn-skip">אין מענה</button>
                     ` : ''}
@@ -397,43 +319,25 @@
                     <button onclick="editItem(${i})" class="btn" style="background:#f39c12; font-size:0.8rem;">עריכה 📝</button>
                     <button onclick="deleteItem(${i})" class="btn" style="background:#c0392b; font-size:0.8rem;">מחיקה ❌</button>
                 </div>`;
-            
             list.appendChild(item);
-            
-            // מפה
             const icon = L.divIcon({ className: 'number-marker', html: i + 1, iconSize: [25, 25] });
             markers.push(L.marker([loc.lat, loc.lng], {icon}).addTo(map));
         });
-        
         if (markers.length > 0) map.fitBounds(new L.featureGroup(markers).getBounds().pad(0.2));
     }
 
-    // --- לוגיקה תפעולית ---
     function reportDone(i) { locations[i].reported = true; locations[i].time = new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}); save(); setTimeout(updateUI, 1500); }
-    
-    function skipLocation(i) {
-        if(confirm("לדלג על הכתובת?")) {
-            locations[i].skipped = true;
-            locations[i].time = new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
-            save(); updateUI();
-        }
-    }
-
+    function skipLocation(i) { if(confirm("לדלג על הכתובת?")) { locations[i].skipped = true; locations[i].time = new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}); save(); updateUI(); } }
     function openSignature(i) { currentSignIndex = i; document.getElementById('signatureModal').style.display = 'flex'; ctx.clearRect(0,0,canvas.width,canvas.height); }
     function clearSignature() { ctx.clearRect(0,0,canvas.width,canvas.height); }
-    function saveSignature() { 
-        locations[currentSignIndex].completed = true; 
-        document.getElementById('signatureModal').style.display = 'none'; 
-        updateUI(); 
-    }
-
-    // --- פונקציות ניהול ---
+    function saveSignature() { locations[currentSignIndex].completed = true; document.getElementById('signatureModal').style.display = 'none'; updateUI(); }
+    
     function toggleEditMode() { 
         isEditMode = !isEditMode; 
         const btn = document.getElementById('editModeBtn');
         btn.innerText = isEditMode ? "סיום עריכה ✅" : "עריכה ✏️";
         btn.style.background = isEditMode ? "var(--green)" : "#34495e";
-        if(isEditMode && sortableInstance) sortableInstance.option("disabled", true); // ביטול גרירה בעריכה
+        if(isEditMode && sortableInstance) sortableInstance.option("disabled", true);
         else if(sortableInstance) sortableInstance.option("disabled", false);
         updateUI(); 
     }
@@ -443,44 +347,29 @@
         document.getElementById('custName').value = loc.custName;
         document.getElementById('orderNum').value = loc.orderId;
         document.getElementById('addressInput').value = loc.name;
-        // טעינת טלפון...
-        if(loc.phone) {
-            document.getElementById('phonePrefix').value = loc.phone.substring(0,3);
-            document.getElementById('custPhone').value = loc.phone.substring(3);
-        }
+        if(loc.phone) { document.getElementById('phonePrefix').value = loc.phone.substring(0,3); document.getElementById('custPhone').value = loc.phone.substring(3); }
         document.getElementById('editIndex').value = i;
         document.getElementById('addBtn').innerText = "שמור שינויים ✔️";
         document.getElementById('addBtn').style.background = "var(--green)";
         window.scrollTo({top:0, behavior:'smooth'});
     }
 
-    function deleteItem(i) {
-        if(confirm("למחוק לצמיתות?")) { locations.splice(i, 1); save(); updateUI(); }
-    }
-
+    function deleteItem(i) { if(confirm("למחוק לצמיתות?")) { locations.splice(i, 1); save(); updateUI(); } }
     function clearAll() { if(confirm("לאפס את כל המערכת?")) { locations = []; save(); updateUI(); } }
-
-    function showToast(msg) {
-        const x = document.getElementById("toast");
-        x.innerText = msg;
-        x.className = "show";
-        setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000);
-    }
+    function showToast(msg) { const x = document.getElementById("toast"); x.innerText = msg; x.className = "show"; setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000); }
 
     async function generateShortLink() {
         if(locations.length===0) return showToast("הרשימה ריקה");
         const encoded = btoa(encodeURIComponent(JSON.stringify(locations)));
         const longLink = window.location.origin + window.location.pathname + "?d=" + encoded;
-        
         try {
             const res = await fetch(`https://is.gd/create.php?format=json&url=${encodeURIComponent(longLink)}`);
             const d = await res.json();
-            const link = d.shorturl || longLink;
-            window.location.href = `https://wa.me/?text=${encodeURIComponent("מסלול חלוקה Cabasso: " + link)}`;
-        } catch(e) {
-            window.location.href = `https://wa.me/?text=${encodeURIComponent("מסלול חלוקה: " + longLink)}`;
-        }
+            window.location.href = `https://wa.me/?text=${encodeURIComponent("מסלול חלוקה Cabasso: " + (d.shorturl || longLink))}`;
+        } catch(e) { window.location.href = `https://wa.me/?text=${encodeURIComponent("מסלול חלוקה: " + longLink)}`; }
     }
+
+    function optimizeForDriver() { navigator.geolocation.getCurrentPosition(pos => { const uLat = pos.coords.latitude, uLng = pos.coords.longitude; let unvisited = locations.filter(l => !l.reported && !l.skipped); let done = locations.filter(l => l.reported || l.skipped); let optimized = []; let cLat = uLat, cLng = uLng; while (unvisited.length > 0) { let closestIdx = 0, minDist = Infinity; unvisited.forEach((loc, idx) => { let d = Math.sqrt(Math.pow(loc.lat-cLat, 2)+Math.pow(loc.lng-cLng, 2)); if(d < minDist) { minDist = d; closestIdx = idx; } }); let next = unvisited.splice(closestIdx, 1)[0]; optimized.push(next); cLat = next.lat; cLng = next.lng; } locations = [...done, ...optimized]; updateUI(); }); }
 
     function exportDailyReport() {
         let csv = "הזמנה,לקוח,כתובת,סטטוס,שעה\n";
