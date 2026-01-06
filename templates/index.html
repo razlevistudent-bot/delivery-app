@@ -59,7 +59,6 @@
         .btn-refresh { background: #34495e; }
         .edit-tools { display: none; gap: 8px; margin-top: 10px; }
         
-        /* עיצוב משופר להשלמה אוטומטית */
         .suggestions-box { position: absolute; background: white; border: 1px solid #ddd; width: calc(100% - 40px); z-index: 1000; max-height: 250px; overflow-y: auto; border-radius: 0 0 10px 10px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); display: none; }
         .suggestion-item { padding: 12px; border-bottom: 1px solid #f0f0f0; cursor: pointer; font-size: 0.95rem; display: flex; flex-direction: column; }
         .suggestion-item:hover { background: #fdf5e6; }
@@ -99,7 +98,11 @@
         <input type="hidden" id="editIndex" value="-1">
         
         <div style="display: flex; gap: 10px;">
-            <div style="flex:1.5"><label>שם לקוח</label><input type="text" id="custName" placeholder="שם מלא"></div>
+            <div style="flex:1.5">
+                <label>שם לקוח</label>
+                <input type="text" id="custName" placeholder="שם מלא (מילוי אוטומטי)" list="customerList" oninput="fillCustomerPhone()">
+                <datalist id="customerList"></datalist>
+            </div>
             <div style="flex:1"><label>הזמנה #</label><input type="text" id="orderNum" placeholder="1001"></div>
         </div>
 
@@ -109,7 +112,7 @@
             <div id="suggestions" class="suggestions-box"></div>
         </div>
 
-        <label>טלפון לקוח</label>
+        <label>טלפון לקוח (מתמלא אוטומטית בבחירת שם)</label>
         <div class="phone-group">
             <select id="phonePrefix"><option value="050">050</option><option value="052">052</option><option value="054">054</option><option value="053">053</option><option value="058">058</option><option value="055">055</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="08">08</option><option value="09">09</option></select>
             <input type="tel" id="custPhone" placeholder="XXXXXXX" maxlength="7">
@@ -154,7 +157,10 @@
     var currentSignIndex = null;
     var isEditMode = false;
     var sortableInstance = null;
-    var topSuggestion = null; // שמירת התוצאה הראשונה ל-Enter
+    var topSuggestion = null;
+    
+    // זיכרון לקוחות
+    var customers = JSON.parse(localStorage.getItem('cabasso_customers')) || {};
 
     const canvas = document.getElementById('signature-pad');
     const ctx = canvas.getContext('2d');
@@ -175,20 +181,14 @@
         } else {
             locations = JSON.parse(localStorage.getItem('cabasso_pro')) || [];
             initSortable();
+            loadCustomerDatalist(); // טעינת לקוחות
         }
         document.getElementById('managerPhone').value = localStorage.getItem('manager_num') || '';
         
-        // האזנה ל-Enter בשדה הכתובת
         document.getElementById('addressInput').addEventListener('keydown', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                // אם יש תוצאה מהחיפוש, נבחר אותה
-                if (topSuggestion) {
-                    selectAddress(topSuggestion);
-                } else {
-                    // אם אין תוצאות, ננסה להוסיף מה שיש
-                    addNewLocation();
-                }
+                if (topSuggestion) { selectAddress(topSuggestion); } else { addNewLocation(); }
             }
         });
 
@@ -198,6 +198,44 @@
     function save() { localStorage.setItem('cabasso_pro', JSON.stringify(locations)); }
     function saveManager() { localStorage.setItem('manager_num', document.getElementById('managerPhone').value); }
 
+    // --- זיכרון לקוחות ---
+    function loadCustomerDatalist() {
+        const list = document.getElementById('customerList');
+        list.innerHTML = '';
+        Object.keys(customers).sort().forEach(name => {
+            const option = document.createElement('option');
+            option.value = name;
+            list.appendChild(option);
+        });
+    }
+
+    function fillCustomerPhone() {
+        const name = document.getElementById('custName').value;
+        if (customers[name]) {
+            const fullPhone = customers[name];
+            // פירוק מספר הטלפון לקידומת ומספר
+            let prefix = fullPhone.substring(0, 3);
+            let number = fullPhone.substring(3);
+            
+            // בדיקה אם הקידומת קיימת ברשימה, אם לא (כמו 02, 03) לוקחים רק 2 תווים
+            const select = document.getElementById('phonePrefix');
+            let found = false;
+            for(let i=0; i<select.options.length; i++){
+                if(select.options[i].value === prefix) found = true;
+            }
+            
+            if(!found) {
+                prefix = fullPhone.substring(0, 2);
+                number = fullPhone.substring(2);
+            }
+
+            document.getElementById('phonePrefix').value = prefix;
+            document.getElementById('custPhone').value = number;
+            showToast("📞 פרטי לקוח מולאו!");
+        }
+    }
+
+    // --- חיפוש כתובות ---
     let debounceTimer;
     function debounceSearch() { clearTimeout(debounceTimer); debounceTimer = setTimeout(searchAddress, 300); }
 
@@ -208,38 +246,29 @@
         if (query.length < 3) { box.style.display = 'none'; return; }
 
         try {
-            // הוספנו חיפוש מדויק יותר
             const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1&countrycodes=il`);
             const data = await res.json();
             box.innerHTML = '';
             
             if (data.length > 0) {
-                topSuggestion = data[0]; // שמירת התוצאה הראשונה ל-Enter
+                topSuggestion = data[0]; 
                 box.style.display = 'block';
                 
                 data.forEach((item, index) => {
                     const div = document.createElement('div');
                     div.className = 'suggestion-item' + (index === 0 ? ' selected' : '');
-                    
                     const addr = item.address;
                     let street = addr.road || addr.street || addr.pedestrian || query;
                     let number = addr.house_number || '';
                     let city = addr.city || addr.town || addr.village || '';
-                    
-                    // בניית תצוגה
                     let mainText = street;
                     if (number) mainText += " " + number;
                     let subText = city;
-
                     div.innerHTML = `<div class="suggestion-main">${mainText}</div><div class="suggestion-sub">${subText}</div>`;
-                    
                     div.onclick = () => selectAddress(item);
                     box.appendChild(div);
                 });
-            } else { 
-                box.style.display = 'none'; 
-                topSuggestion = null;
-            }
+            } else { box.style.display = 'none'; topSuggestion = null; }
         } catch (e) {}
     }
 
@@ -247,9 +276,6 @@
         const input = document.getElementById('addressInput');
         const box = document.getElementById('suggestions');
         const originalVal = input.value;
-        
-        // חילוץ מספר בית מהקלט המקורי של המשתמש (אם הוא חסר ב-API)
-        // regex שמחפש מספרים בסוף המחרוזת או אחרי רחוב
         const userNumberMatch = originalVal.match(/\d+$/); 
         const userNumber = userNumberMatch ? userNumberMatch[0] : '';
 
@@ -258,12 +284,8 @@
         let apiNumber = addr.house_number || '';
         let city = addr.city || addr.town || addr.village || '';
 
-        // אם ה-API לא הביא מספר, אבל המשתמש כן הקליד מספר -> נוסיף אותו ידנית
-        if (!apiNumber && userNumber) {
-            apiNumber = userNumber;
-        }
+        if (!apiNumber && userNumber) { apiNumber = userNumber; }
 
-        // הרכבת הכתובת הסופית
         let finalText = street;
         if (apiNumber) finalText += " " + apiNumber;
         if (city) finalText += ", " + city;
@@ -271,10 +293,7 @@
         input.value = finalText;
         input.dataset.lat = item.lat;
         input.dataset.lng = item.lon;
-        
         box.style.display = 'none';
-        
-        // מעבר אוטומטי לשדה הבא (טלפון) אם בחרנו עם העכבר, או הוספה אם זה אנטר
         document.getElementById('custPhone').focus();
     }
 
@@ -283,26 +302,31 @@
         let lat = input.dataset.lat;
         let lng = input.dataset.lng;
         
-        // גיבוי: אם לא נבחרה כתובת מהרשימה
         if (!lat && input.value.length > 3) {
             const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(input.value)}&limit=1`);
             const data = await res.json();
             if (data.length > 0) { lat = data[0].lat; lng = data[0].lon; }
             else { 
-                if(!confirm("המיקום המדויק לא נמצא במפה. להוסיף בכל זאת?")) return;
+                if(!confirm("המיקום לא נמצא במדויק. להוסיף בכל זאת?")) return;
                 lat = 32.0853; lng = 34.7818; 
             }
-        } else if (!lat) {
-            return showToast("❌ נא להזין כתובת");
-        }
+        } else if (!lat) { return showToast("❌ נא להזין כתובת"); }
 
         const prefix = document.getElementById('phonePrefix').value;
         const num = document.getElementById('custPhone').value;
+        const name = document.getElementById('custName').value;
         const idx = parseInt(document.getElementById('editIndex').value);
+
+        // שמירת הלקוח בזיכרון
+        if (name && num) {
+            customers[name] = prefix + num;
+            localStorage.setItem('cabasso_customers', JSON.stringify(customers));
+            loadCustomerDatalist();
+        }
 
         const newLoc = {
             name: input.value, 
-            custName: document.getElementById('custName').value || 'לקוח',
+            custName: name || 'לקוח',
             orderId: document.getElementById('orderNum').value || '---',
             phone: num ? (prefix + num) : '',
             lat: parseFloat(lat), lng: parseFloat(lng),
@@ -320,18 +344,14 @@
             showToast("נוסף!");
         }
         
-        // איפוס והכנה להזנה הבאה
         input.dataset.lat = ''; input.dataset.lng = '';
         ['addressInput','custName','orderNum','custPhone'].forEach(id => document.getElementById(id).value = '');
-        
-        // החזרת פוקוס לשם הלקוח להזנה מהירה
         document.getElementById('custName').focus();
-        
         save(); updateUI();
     }
 
-    // --- שאר הפונקציות (ללא שינוי) ---
     function initSortable() { const el = document.getElementById('addressList'); sortableInstance = Sortable.create(el, { handle: '.route-item', animation: 150, onEnd: function (evt) { const item = locations.splice(evt.oldIndex, 1)[0]; locations.splice(evt.newIndex, 0, item); save(); updateUI(); } }); }
+    
     function updateUI() {
         const list = document.getElementById('addressList');
         list.innerHTML = '';
@@ -345,9 +365,11 @@
 
             const item = document.createElement('div');
             item.className = `route-item ${loc.reported ? 'is-completed' : ''} ${loc.skipped ? 'is-skipped' : ''} ${isLocked ? 'is-locked' : ''} ${isActive ? 'active-now' : ''}`;
+            
             const mPhone = document.getElementById('managerPhone').value.replace(/\D/g,'');
             const msg = encodeURIComponent(`💡 Cabasso Group\n📦 הזמנה: ${loc.orderId}\n👤 לקוח: ${loc.custName}\n📍 כתובת: ${loc.name}\n✅ סטטוס: נמסר!`);
             const waLink = `https://wa.me/972${mPhone.startsWith('0')?mPhone.substring(1):mPhone}?text=${msg}`;
+
             let statusText = 'ממתין';
             if (loc.reported) statusText = 'נמסר: ' + loc.time;
             else if (loc.skipped) statusText = 'דילוג: ' + loc.time;
@@ -359,6 +381,7 @@
                 <span class="badge ${loc.reported ? 'active' : ''}">${statusText}</span>
                 <div style="font-weight:700; font-size:1.1rem;">${i+1}. ${loc.custName} <span style="font-weight:400; font-size:0.9rem;">(#${loc.orderId})</span></div>
                 <div style="font-size:0.9rem; color:#666; margin-bottom:5px;">${loc.name}</div>
+                
                 <div class="actions">
                     ${!loc.completed && !loc.skipped && !isLocked && !isEditMode ? `
                         <a href="https://waze.com/ul?ll=${loc.lat},${loc.lng}&navigate=yes" class="btn btn-waze">Waze</a>
@@ -368,10 +391,12 @@
                     ` : ''}
                     ${loc.completed && !loc.reported && !isEditMode ? `<a href="${waLink}" target="_blank" class="btn btn-whatsapp" onclick="reportDone(${i})">דווח למנהל לשחרור הבא 🔓</a>` : ''}
                 </div>
+                
                 <div class="edit-tools" style="${isEditMode ? 'display:flex' : 'display:none'}">
                     <button onclick="editItem(${i})" class="btn" style="background:#f39c12; font-size:0.8rem;">עריכה 📝</button>
                     <button onclick="deleteItem(${i})" class="btn" style="background:#c0392b; font-size:0.8rem;">מחיקה ❌</button>
                 </div>`;
+            
             list.appendChild(item);
             const icon = L.divIcon({ className: 'number-marker', html: i + 1, iconSize: [25, 25] });
             markers.push(L.marker([loc.lat, loc.lng], {icon}).addTo(map));
@@ -385,10 +410,37 @@
     function clearSignature() { ctx.clearRect(0,0,canvas.width,canvas.height); }
     function saveSignature() { locations[currentSignIndex].completed = true; document.getElementById('signatureModal').style.display = 'none'; updateUI(); }
     function toggleEditMode() { isEditMode = !isEditMode; document.getElementById('editModeBtn').innerText = isEditMode ? "סיום עריכה ✅" : "עריכה ✏️"; document.getElementById('editModeBtn').style.background = isEditMode ? "var(--green)" : "#34495e"; if(isEditMode && sortableInstance) sortableInstance.option("disabled", true); else if(sortableInstance) sortableInstance.option("disabled", false); updateUI(); }
-    function editItem(i) { const loc = locations[i]; document.getElementById('custName').value = loc.custName; document.getElementById('orderNum').value = loc.orderId; document.getElementById('addressInput').value = loc.name; if(loc.phone) { document.getElementById('phonePrefix').value = loc.phone.substring(0,3); document.getElementById('custPhone').value = loc.phone.substring(3); } document.getElementById('editIndex').value = i; document.getElementById('addBtn').innerText = "שמור שינויים ✔️"; document.getElementById('addBtn').style.background = "var(--green)"; window.scrollTo({top:0, behavior:'smooth'}); }
+    
+    function editItem(i) { 
+        const loc = locations[i]; 
+        document.getElementById('custName').value = loc.custName; 
+        document.getElementById('orderNum').value = loc.orderId; 
+        document.getElementById('addressInput').value = loc.name; 
+        // טעינת מיקום קיים כדי לא לחפש שוב
+        document.getElementById('addressInput').dataset.lat = loc.lat;
+        document.getElementById('addressInput').dataset.lng = loc.lng;
+        
+        if(loc.phone) { 
+            let pfx = loc.phone.substring(0,3); 
+            let num = loc.phone.substring(3);
+            if(pfx.length > 2 && document.querySelector("#phonePrefix option[value='"+pfx+"']")) {
+                document.getElementById('phonePrefix').value = pfx;
+                document.getElementById('custPhone').value = num;
+            } else {
+                document.getElementById('phonePrefix').value = loc.phone.substring(0,2);
+                document.getElementById('custPhone').value = loc.phone.substring(2);
+            }
+        } 
+        document.getElementById('editIndex').value = i; 
+        document.getElementById('addBtn').innerText = "שמור שינויים ✔️"; 
+        document.getElementById('addBtn').style.background = "var(--green)"; 
+        window.scrollTo({top:0, behavior:'smooth'}); 
+    }
+
     function deleteItem(i) { if(confirm("למחוק?")) { locations.splice(i, 1); save(); updateUI(); } }
     function clearAll() { if(confirm("לאפס את כל המערכת?")) { locations = []; save(); updateUI(); } }
     function showToast(msg) { const x = document.getElementById("toast"); x.innerText = msg; x.className = "show"; setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000); }
+    
     async function generateShortLink() { if(locations.length===0) return showToast("הרשימה ריקה"); const encoded = btoa(encodeURIComponent(JSON.stringify(locations))); const longLink = window.location.origin + window.location.pathname + "?d=" + encoded; try { const res = await fetch(`https://is.gd/create.php?format=json&url=${encodeURIComponent(longLink)}`); const d = await res.json(); const link = d.shorturl || longLink; window.location.href = `https://wa.me/?text=${encodeURIComponent("מסלול חלוקה Cabasso: " + link)}`; } catch(e) { window.location.href = `https://wa.me/?text=${encodeURIComponent("מסלול חלוקה: " + longLink)}`; } }
     function exportDailyReport() { let csv = "הזמנה,לקוח,כתובת,סטטוס,שעה\n"; locations.forEach(l => { let s = l.reported ? "בוצע" : (l.skipped ? "דילוג" : "טרם"); csv += `${l.orderId},${l.custName},"${l.name}",${s},${l.time||'-'}\n`; }); const blob = new Blob(["\ufeff"+csv], {type:'text/csv;charset=utf-8;'}); const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `Report_${new Date().toLocaleDateString().replace(/\//g,'-')}.csv`; link.click(); }
     function optimizeForDriver() { navigator.geolocation.getCurrentPosition(pos => { const uLat = pos.coords.latitude, uLng = pos.coords.longitude; let unvisited = locations.filter(l => !l.reported && !l.skipped); let done = locations.filter(l => l.reported || l.skipped); let optimized = []; let cLat = uLat, cLng = uLng; while (unvisited.length > 0) { let closestIdx = 0, minDist = Infinity; unvisited.forEach((loc, idx) => { let d = Math.sqrt(Math.pow(loc.lat-cLat, 2)+Math.pow(loc.lng-cLng, 2)); if(d < minDist) { minDist = d; closestIdx = idx; } }); let next = unvisited.splice(closestIdx, 1)[0]; optimized.push(next); cLat = next.lat; cLng = next.lng; } locations = [...done, ...optimized]; updateUI(); }); }
